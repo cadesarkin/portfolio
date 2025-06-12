@@ -51,7 +51,7 @@ export default function Projects() {
           <div className="flex items-center justify-between w-full max-w-6xl mx-auto">
             {/* Left side - Text */}
             <div className="flex-1 text-4xl md:text-6xl font-bold">
-              <Typewriter text="ad vance" speed={100} show={false} />
+              <Typewriter text="VANCE" speed={100} show={false} />
             </div>
             
             {/* Right side - Image with button overlay */}
