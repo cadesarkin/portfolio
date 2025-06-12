@@ -13,8 +13,42 @@ export default function Projects() {
     <div className="relative w-full bg-black h-screen overflow-hidden">
       <main className="h-screen text-white relative w-full">
         <Navbar />
-        <div className="flex items-center justify-center h-full px-4 -mt-40">
-          <div className="flex items-center justify-between w-full max-w-6xl mx-auto -mt-40">
+        {/* Mobile Layout */}
+        <div className="sm:hidden flex flex-col items-center justify-center h-full px-4 space-y-8">
+          {/* Title text */}
+          <div className="text-4xl font-bold text-center">
+            <Typewriter text="ad vance" speed={100} show={false} />
+          </div>
+          
+          {/* Image with button overlay */}
+          <div className="relative w-full max-w-lg aspect-[4/3]">
+            <Image
+              src="/vance_photo.jpeg"
+              alt="Vance Project"
+              fill
+              style={{ objectFit: 'cover' }}
+              className="rounded-lg"
+            />
+            <Link href="https://vance-ad.com" target="_blank" rel="noopener noreferrer" className="absolute inset-0 flex items-center justify-center">
+              <Image
+                src="/vance_button.png"
+                alt="Vance Button"
+                width={150}
+                height={150}
+                className="hover:scale-105 transition-transform duration-200 cursor-pointer"
+              />
+            </Link>
+          </div>
+          
+          {/* More to come text */}
+          <div className="text-xl text-center">
+            <Typewriter text="More to come..." speed={100} show={true} />
+          </div>
+        </div>
+
+        {/* Desktop Layout */}
+        <div className="hidden sm:flex items-center justify-center h-full px-4 -mt-40">
+          <div className="flex items-center justify-between w-full max-w-6xl mx-auto">
             {/* Left side - Text */}
             <div className="flex-1 text-4xl md:text-6xl font-bold">
               <Typewriter text="ad vance" speed={100} show={false} />
@@ -41,14 +75,14 @@ export default function Projects() {
             </div>
           </div>
         </div>
-        
-        {/* More to come text */}
-        <div className="w-full text-center text-2xl absolute bottom-[25%]">
+
+        {/* More to come text (Desktop) */}
+        <div className="hidden sm:block w-full text-center text-2xl absolute bottom-[25%]">
           <Typewriter text="More to come..." speed={100} show={true} />
         </div>
 
         {/* ASCII Fire */}
-        <div className="w-full h-[200px] absolute bottom-0">
+        <div className="w-full h-[150px] sm:h-[200px] absolute bottom-0">
           <AsciiFireBackground />
         </div>
       </main>
