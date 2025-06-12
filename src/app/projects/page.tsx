@@ -23,7 +23,7 @@ export default function Projects() {
           {/* Image with button overlay */}
           <div className="relative w-full max-w-lg aspect-[4/3]">
             <Image
-              src="/vance_photo.jpeg"
+              src="/vance_photo.jpg"
               alt="Vance Project"
               fill
               style={{ objectFit: 'cover' }}
@@ -57,7 +57,7 @@ export default function Projects() {
             {/* Right side - Image with button overlay */}
             <div className="flex-1 relative h-[500px]">
               <Image
-                src="/vance_photo.jpeg"
+                src="/vance_photo.jpg"
                 alt="Vance Project"
                 fill
                 style={{ objectFit: 'cover' }}
