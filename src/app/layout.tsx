@@ -1,8 +1,11 @@
 import type { Metadata } from "next"
-import { JetBrains_Mono } from "next/font/google"
+import { IBM_Plex_Mono } from "next/font/google"
 import "./globals.css"
 
-const jetBrainsMono = JetBrains_Mono({ subsets: ["latin"] })
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["300"],
+})
 
 export const metadata: Metadata = {
   title: "Cade Sarkin",
@@ -16,7 +19,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={jetBrainsMono.className}>
+      <body className={ibmPlexMono.className}>
         {children}
       </body>
     </html>
