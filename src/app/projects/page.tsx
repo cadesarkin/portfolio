@@ -14,7 +14,7 @@ export default function Projects() {
       <main className="h-screen text-white relative w-full">
         <Navbar />
         {/* Mobile Layout */}
-        <div className="sm:hidden flex flex-col items-center justify-center h-full px-4 space-y-8">
+        <div className="sm:hidden flex flex-col items-center justify-center h-full px-4 space-y-8 mt-40">
           {/* Title text */}
           <div className="text-4xl font-bold text-center">
             <Typewriter text="VANCE" speed={100} show={false} showMobile={false} />

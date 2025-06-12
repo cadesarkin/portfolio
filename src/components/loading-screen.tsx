@@ -27,11 +27,6 @@ export default function LoadingScreen({ onLoadingComplete }: LoadingScreenProps)
       <div className="text-center">
         {/* Animated Logo */}
         <div className="relative mb-8">
-          {/* Outer rotating ring */}
-          <div className="absolute inset-0 w-24 h-24 mx-auto border-4 border-blue-400/30 rounded-full animate-spin"></div>
-
-          {/* Inner pulsing ring */}
-          <div className="absolute inset-2 w-20 h-20 mx-auto border-2 border-blue-500/50 rounded-full animate-pulse"></div>
 
           {/* Center logo */}
           <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
