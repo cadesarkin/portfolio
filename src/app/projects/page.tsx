@@ -82,7 +82,7 @@ export default function Projects() {
         </div>
 
         {/* ASCII Fire */}
-        <div className="w-full h-[120px] sm:h-[150px] absolute bottom-10 sm:bottom-10">
+        <div className="w-full h-[120px] sm:h-[150px] absolute bottom-0 sm:bottom-10">
           <AsciiFireBackground />
         </div>
       </main>
