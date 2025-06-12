@@ -31,11 +31,11 @@ export default function Contact() {
             <div className="space-y-4 sm:space-y-6">
               <div className="flex flex-col items-center justify-center space-y-3 sm:space-y-4">
                 <Link
-                  href="mailto:cadesarkin@gmail.com"
+                  href="mailto:sarkincade@gmail.com"
                   className="flex items-center space-x-2 text-white/80 hover:text-sky-400 transition-all duration-300 hover:scale-110"
                 >
                   <HiOutlineEnvelope className="h-5 w-5 sm:h-6 sm:w-6" />
-                  <span className="text-base sm:text-lg">cadesarkin@gmail.com</span>
+                  <span className="text-base sm:text-lg">sarkincade@gmail.com</span>
                 </Link>
                 <Link
                   href="tel:+14796849353"
