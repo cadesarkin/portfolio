@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState, useEffect } from "react"
-import { SiGithub, SiInstagram, SiLinkedin } from "react-icons/si"
+import { SiGithub, SiLinkedin } from "react-icons/si"
 import { Send } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -36,12 +36,32 @@ export default function Navbar() {
     <div className="fixed top-0 left-0 right-0 z-50 px-4 py-3">
       <div className="mx-auto max-w-7xl">
         <div className="relative flex items-center justify-between rounded-xl bg-white/5 backdrop-blur-xl backdrop-filter px-4 sm:px-6 py-3 shadow-2xl border border-white/20 overflow-hidden">
-          {/* Glass effects */}
-          <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 via-white/5 to-transparent opacity-60"></div>
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"></div>
-          <div className="absolute top-0 left-0 bottom-0 w-px bg-gradient-to-b from-white/30 via-transparent to-transparent"></div>
-          <div className="absolute inset-0 rounded-xl shadow-inner shadow-white/10"></div>
-          <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 animate-pulse opacity-30"></div>
+          {/* Enhanced Glass effects */}
+          <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 via-white/5 to-transparent opacity-70"></div>
+          
+          {/* Top highlight */}
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
+          
+          {/* Left highlight */}
+          <div className="absolute top-0 left-0 bottom-0 w-[1px] bg-gradient-to-b from-white/40 via-white/10 to-transparent"></div>
+          
+          {/* Right highlight */}
+          <div className="absolute top-0 right-0 bottom-0 w-[1px] bg-gradient-to-b from-white/40 via-white/10 to-transparent"></div>
+          
+          {/* Bottom shadow */}
+          <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-black/20 to-transparent"></div>
+          
+          {/* Inner shadow */}
+          <div className="absolute inset-0 rounded-xl shadow-[inset_0_0_10px_rgba(255,255,255,0.15)]"></div>
+          
+          {/* Diagonal glare effect */}
+          <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shine"></div>
+          
+          {/* Radial glare */}
+          <div className="absolute inset-0 rounded-xl bg-radial-gradient opacity-25"></div>
+          
+          {/* Subtle pulsing overlay */}
+          <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-white/5 via-transparent to-white/5 animate-[pulse_6s_ease-in-out_infinite] opacity-20"></div>
 
           {/* Desktop Navigation */}
           <NavigationMenu className="hidden sm:flex relative z-10">
@@ -92,15 +112,6 @@ export default function Navbar() {
             >
               <span className="sr-only">Contact</span>
               <Send className="h-5 w-5" />
-            </Link>
-            <Link
-              href="https://instagram.com/cadesarkin"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white/80 hover:text-pink-400 transition-all duration-300 hover:drop-shadow-lg hover:scale-110"
-            >
-              <span className="sr-only">Instagram</span>
-              <SiInstagram className="h-5 w-5" />
             </Link>
             <Link
               href="https://linkedin.com/in/cade-sarkin-4a2918222/"
@@ -179,15 +190,7 @@ export default function Navbar() {
                 >
                   Resume
                 </Link>
-                <div className="flex items-center space-x-4 pt-2">
-                  <Link
-                    href="https://instagram.com/cadesarkin"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-white/80 hover:text-pink-400 transition-all duration-300"
-                  >
-                    <SiInstagram className="h-5 w-5" />
-                  </Link>
+                <div className="flex space-x-4">
                   <Link
                     href="https://linkedin.com/in/cade-sarkin-4a2918222/"
                     target="_blank"

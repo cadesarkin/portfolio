@@ -48,6 +48,21 @@ module.exports = {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      keyframes: {
+        shine: {
+          '0%': { transform: 'translateX(-50%) skewX(-12deg)', opacity: '0' },
+          '25%': { transform: 'translateX(0%) skewX(-12deg)', opacity: '1' },
+          '50%': { transform: 'translateX(50%) skewX(-12deg)', opacity: '0' },
+          '75%': { transform: 'translateX(0%) skewX(-12deg)', opacity: '1' },
+          '100%': { transform: 'translateX(-50%) skewX(-12deg)', opacity: '0' }
+        }
+      },
+      animation: {
+        shine: 'shine 12s ease-in-out infinite'
+      },
+      backgroundImage: {
+        'radial-gradient': 'radial-gradient(circle at center, rgba(255,255,255,0.15) 0%, transparent 70%)'
+      }
     },
   },
   plugins: [require('@tailwindcss/typography')],

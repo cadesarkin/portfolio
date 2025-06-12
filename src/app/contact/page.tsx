@@ -5,7 +5,7 @@ import Link from "next/link"
 import Navbar from "@/components/navbar"
 import Typewriter from "@/components/typewriter"
 import AsciiFireBackground from "@/components/AsciiFireBackground"
-import { SiGithub, SiInstagram, SiLinkedin } from "react-icons/si"
+import { SiGithub, SiLinkedin } from "react-icons/si"
 import { HiOutlineEnvelope, HiOutlinePhone } from "react-icons/hi2"
 
 export default function Contact() {
@@ -44,38 +44,24 @@ export default function Contact() {
                   <HiOutlinePhone className="h-5 w-5 sm:h-6 sm:w-6" />
                   <span className="text-base sm:text-lg">+1 (479)-684-9353</span>
                 </Link>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-8">
-                <Link
-                  href="https://instagram.com/cadesarkin"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center space-x-2 text-white/80 hover:text-pink-400 transition-all duration-300 hover:scale-110"
-                >
-                  <SiInstagram className="h-5 w-5 sm:h-6 sm:w-6" />
-                  <span className="text-base sm:text-lg">@cadesarkin</span>
-                </Link>
-
-                <Link
-                  href="https://linkedin.com/in/cade-sarkin-4a2918222/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center space-x-2 text-white/80 hover:text-blue-400 transition-all duration-300 hover:scale-110"
-                >
-                  <SiLinkedin className="h-5 w-5 sm:h-6 sm:w-6" />
-                  <span className="text-base sm:text-lg">LinkedIn</span>
-                </Link>
-
-                <Link
-                  href="https://github.com/cadesarkin"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center space-x-2 text-white/80 hover:text-gray-300 transition-all duration-300 hover:scale-110"
-                >
-                  <SiGithub className="h-5 w-5 sm:h-6 sm:w-6" />
-                  <span className="text-base sm:text-lg">GitHub</span>
-                </Link>
+                <div className="flex space-x-4 pt-4">
+                  <Link
+                    href="https://linkedin.com/in/cade-sarkin-4a2918222/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-white/80 hover:text-blue-400 transition-all duration-300"
+                  >
+                    <SiLinkedin className="h-5 w-5 sm:h-6 sm:w-6" />
+                  </Link>
+                  <Link
+                    href="https://github.com/cadesarkin"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-white/80 hover:text-gray-300 transition-all duration-300"
+                  >
+                    <SiGithub className="h-5 w-5 sm:h-6 sm:w-6" />
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
