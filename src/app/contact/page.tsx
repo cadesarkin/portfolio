@@ -10,7 +10,7 @@ import { HiOutlineEnvelope, HiOutlinePhone } from "react-icons/hi2"
 
 export default function Contact() {
   return (
-    <div className="relative w-full bg-black h-screen overflow-hidden">
+    <div className="relative w-full h-screen overflow-hidden">
       <main className="h-screen text-white relative w-full">
         <Navbar />
         <div className="flex items-center justify-center h-full px-4">

@@ -18,7 +18,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen h-screen bg-black text-white relative overflow-hidden">
+    <main className="min-h-screen h-screen text-white relative overflow-hidden">
       <Navbar />
       <div className="flex items-center justify-center h-full px-4 -mt-20 sm:-mt-40">
         <div className="text-center max-w-4xl">

@@ -19,7 +19,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={ibmPlexMono.className}>
+      <body className={`${ibmPlexMono.className} bg-gradient-to-br from-gray-900 to-black min-h-screen`}>
         {children}
       </body>
     </html>
