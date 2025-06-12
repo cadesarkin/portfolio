@@ -17,7 +17,7 @@ export default function Projects() {
         <div className="sm:hidden flex flex-col items-center justify-center h-full px-4 space-y-8">
           {/* Title text */}
           <div className="text-4xl font-bold text-center">
-            <Typewriter text="ad vance" speed={100} show={false} showMobile={false} />
+            <Typewriter text="VANCE" speed={100} show={false} showMobile={false} />
           </div>
           
           {/* Image with button overlay */}
