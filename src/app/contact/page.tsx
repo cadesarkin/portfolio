@@ -16,7 +16,7 @@ export default function Contact() {
         <div className="flex items-center justify-center h-full px-4">
           <div className="text-center max-w-2xl -mt-20 sm:-mt-40">
             <h1 className="text-3xl sm:text-6xl font-bold mb-6 sm:mb-8">
-              <Typewriter text="Let's Connect" speed={100} show={true} />
+              <Typewriter text="Let's Connect" speed={100} show={true} showMobile={false} />
             </h1>
 
             <div className="relative w-36 h-36 sm:w-48 sm:h-48 mx-auto mb-6 sm:mb-8">
@@ -82,7 +82,7 @@ export default function Contact() {
         </div>
 
         {/* ASCII Fire */}
-        <div className="w-full h-[150px] sm:h-[200px] absolute bottom-20 sm:bottom-40">
+        <div className="w-full h-[120px] sm:h-[200px] absolute bottom-10 sm:bottom-30">
           <AsciiFireBackground />
         </div>
       </main>

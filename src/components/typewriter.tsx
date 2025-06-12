@@ -6,9 +6,10 @@ interface TypewriterProps {
   text: string
   speed?: number
   show?: boolean
+  showMobile?: boolean
 }
 
-export default function Typewriter({ text, speed, show }: TypewriterProps) {
+export default function Typewriter({ text, speed, show, showMobile = true }: TypewriterProps) {
     const [displayedText, setDisplayedText] = useState("")
     const [currentIndex, setCurrentIndex] = useState(0)
     const [showCursor, setShowCursor] = useState(true)
@@ -39,7 +40,7 @@ export default function Typewriter({ text, speed, show }: TypewriterProps) {
       <span>
         {displayedText}
         {show && (
-          <span className={`${showCursor ? "opacity-100" : "opacity-0"} transition-opacity duration-100`}>█</span>
+          <span className={`${showCursor ? "opacity-100" : "opacity-0"} transition-opacity duration-100 ${!showMobile ? "hidden sm:inline" : ""}`}>█</span>
         )}
       </span>
     )

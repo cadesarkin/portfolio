@@ -17,7 +17,7 @@ export default function Projects() {
         <div className="sm:hidden flex flex-col items-center justify-center h-full px-4 space-y-8">
           {/* Title text */}
           <div className="text-4xl font-bold text-center">
-            <Typewriter text="ad vance" speed={100} show={false} />
+            <Typewriter text="ad vance" speed={100} show={false} showMobile={false} />
           </div>
           
           {/* Image with button overlay */}
@@ -42,7 +42,7 @@ export default function Projects() {
           
           {/* More to come text */}
           <div className="text-xl text-center">
-            <Typewriter text="More to come..." speed={100} show={true} />
+            <Typewriter text="More to come..." speed={100} show={true} showMobile={false} />
           </div>
         </div>
 
@@ -77,12 +77,12 @@ export default function Projects() {
         </div>
 
         {/* More to come text (Desktop) */}
-        <div className="hidden sm:block w-full text-center text-2xl absolute bottom-[25%]">
+        <div className="hidden sm:block w-full text-center text-2xl absolute bottom-[20%]">
           <Typewriter text="More to come..." speed={100} show={true} />
         </div>
 
         {/* ASCII Fire */}
-        <div className="w-full h-[150px] sm:h-[200px] absolute bottom-0">
+        <div className="w-full h-[120px] sm:h-[150px] absolute bottom-10 sm:bottom-10">
           <AsciiFireBackground />
         </div>
       </main>

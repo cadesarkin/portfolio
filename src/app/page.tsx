@@ -20,7 +20,7 @@ export default function Home() {
   return (
     <main className="min-h-screen h-screen bg-black text-white relative overflow-hidden">
       <Navbar />
-      <div className="flex items-center justify-center h-full px-4 sm:-mt-80">
+      <div className="flex items-center justify-center h-full px-4 -mt-40 sm:-mt-80">
         <div className="text-center max-w-4xl">
           <div className="text-3xl sm:text-6xl text-sky-300 font-bold mb-4 sm:mb-6 w-full max-w-4xl mx-auto">
             <Typewriter text="Hi, my name is Cade Sarkin" speed={60} show={false} />
@@ -34,7 +34,7 @@ export default function Home() {
           </div>
         </div>
       </div>
-      <div className="absolute bottom-[20%] sm:bottom-[30%] left-0 right-0 h-[150px] sm:h-[200px] pointer-events-none">
+      <div className="absolute bottom-[10%] sm:bottom-[30%] left-0 right-0 h-[120px] sm:h-[200px] pointer-events-none">
         <AsciiFireBackground />
       </div>
     </main>
