@@ -30,11 +30,10 @@ export default function AsciiFireBackground() {
     }
 
     let loaded = false
-    let running = false
     let asciiData: string[][] = []
     let fireIndex = 0
     let then = Date.now()
-    let fpsInterval = 1000 / config.animation_fps
+    const fpsInterval = 1000 / config.animation_fps
     let oneVw = 0
     let ctx: CanvasRenderingContext2D | null = null
 
@@ -109,7 +108,6 @@ export default function AsciiFireBackground() {
     const animate = () => {
       if (!loaded) return
       
-      running = true
       requestAnimationFrame(animate)
 
       const now = Date.now()
@@ -145,7 +143,6 @@ export default function AsciiFireBackground() {
 
     return () => {
       window.removeEventListener('resize', calculateSizes)
-      running = false
     }
   }, [])
 

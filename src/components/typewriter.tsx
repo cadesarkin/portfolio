@@ -19,11 +19,11 @@ export default function Typewriter({ text, speed, show }: TypewriterProps) {
         const timeout = setTimeout(() => {
           setDisplayedText((prev) => prev + text[currentIndex])
           setCurrentIndex((prev) => prev + 1)
-        }, speed) // Adjust typing speed here (lower = faster)
+        }, speed || 100) // Default speed if not provided
   
         return () => clearTimeout(timeout)
       }
-    }, [currentIndex])
+    }, [currentIndex, text, speed])
   
     useEffect(() => {
       // Blinking cursor animation
