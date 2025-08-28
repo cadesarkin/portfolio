@@ -14,7 +14,7 @@ export default function Projects() {
       <main className="h-screen text-white relative w-full">
         <Navbar />
         {/* Mobile Layout */}
-        <div className="sm:hidden flex flex-col items-center justify-center h-full px-4 space-y-6 -mt-20">
+        <div className="sm:hidden flex flex-col items-center justify-center h-full px-4 space-y-6 pt-28 pb-32">
           {/* Title image */}
           <div className="flex justify-center">
             <Image
@@ -44,7 +44,7 @@ export default function Projects() {
         </div>
 
         {/* Desktop Layout */}
-        <div className="hidden sm:flex items-center justify-center h-full px-4 -mt-32">
+        <div className="hidden sm:flex items-center justify-center h-full px-4 -mt-32 pb-32">
           <div className="flex items-center justify-between w-full max-w-7xl mx-auto gap-8">
             {/* Left side - Logo */}
             <div className="flex-shrink-0 flex justify-center">
@@ -71,7 +71,7 @@ export default function Projects() {
         </div>
 
         {/* More to come text (Desktop) */}
-        <div className="hidden sm:block w-full text-center text-2xl absolute bottom-[20%]">
+        <div className="hidden sm:block w-full text-center text-2xl absolute bottom-[25%]">
           <Typewriter text="More to come..." speed={100} show={true} />
         </div>
 
