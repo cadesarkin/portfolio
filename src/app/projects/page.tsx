@@ -1,7 +1,6 @@
 "use client"
 
 import Image from "next/image"
-import Link from "next/link"
 import Navbar from "@/components/navbar"
 import Typewriter from "@/components/typewriter"
 import AsciiFireBackground from "@/components/AsciiFireBackground"

@@ -49,7 +49,7 @@ export default function EmbeddedWebsite({
         // If we can access contentWindow, it's likely working
         setIsBlocked(false)
       }
-    } catch (error) {
+    } catch {
       setIsBlocked(true)
     }
   }
