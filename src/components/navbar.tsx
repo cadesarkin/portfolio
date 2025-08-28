@@ -79,9 +79,7 @@ export default function Navbar() {
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <NavigationMenuLink
-                  href="/resume.pdf"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="/resume"
                   className={cn(
                     navLinkClass,
                     "bg-transparent hover:bg-white/10 text-white backdrop-blur-sm",
@@ -182,9 +180,7 @@ export default function Navbar() {
                   Projects
                 </Link>
                 <Link
-                  href="/resume.pdf"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="/resume"
                   className="text-white hover:text-sky-400 transition-all duration-300"
                   onClick={() => setMobileMenuOpen(false)}
                 >
