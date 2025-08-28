@@ -115,10 +115,9 @@ function DropdownSection({ children, title, delay = 0, className = "" }: Dropdow
 interface TechSkillProps {
   name: string
   logoPath: string
-  category: string
 }
 
-function TechSkill({ name, logoPath, category }: TechSkillProps) {
+function TechSkill({ name, logoPath }: TechSkillProps) {
   return (
     <div className="flex flex-col items-center p-3 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105">
       <div className="w-12 h-12 relative mb-2">
@@ -159,7 +158,7 @@ export default function ResumePage() {
                 <DropdownSection title="Software Engineer II – Java" delay={0} className="ml-8">
                   <ul className="space-y-2 text-gray-300 list-disc pl-5">
                     <li>Spearheaded conversion of session storage to GraphQL, significantly reducing bugs and enhancing user experience, updating over 1000 JUnit tests in the process. This allows for session information to be retained over different tabs and increasing speed of fetching necessary user info by nearly 50%.</li>
-                    <li>Researched and implemented solutions for critical IT issues. For example, resolving a 6-month operational issue where users couldn't book an intermodal order through the legacy systems without having to reach out to a representative.</li>
+                    <li>Researched and implemented solutions for critical IT issues. For example, resolving a 6-month operational issue where users couldn&apos;t book an intermodal order through the legacy systems without having to reach out to a representative.</li>
                     <li>Selected to lead key initiatives, adding OpenAPI specs and working with the business to create documentation attached to each shipment that is generated through shipment creation which allows for the customer and shipper to have more accurate information such as, shipment items, hazmat information, stop locations, etc.</li>
                     <li>Created new microservices to improve customer booking, substantially increasing booking speeds. This allows for a user to go through and find quotes before they are signed up for an account, with availability to use credit card for the first time ever, increasing company share of nationwide LTL shipping market.</li>
                     <li>Developed and optimized SQL queries and managed relational databases to improve data retrieval efficiency and fix bugs causing issues in production. Solved large database type mismatch error causing 80% down rate in Grafana testing logs, decreasing this number back to below 10%.</li>
@@ -253,11 +252,11 @@ export default function ResumePage() {
                 <div>
                   <h4 className="text-lg font-semibold text-sky-300 mb-3">Backend</h4>
                   <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
-                    <TechSkill name="Java" logoPath="/java-logo.png" category="backend" />
-                    <TechSkill name="Spring Boot" logoPath="/spring-boot.png" category="backend" />
-                    <TechSkill name="C++" logoPath="/c-logo.png" category="backend" />
-                    <TechSkill name="Python" logoPath="/python-logo.png" category="backend" />
-                    <TechSkill name="SQL" logoPath="/sql-logo.png" category="backend" />
+                    <TechSkill name="Java" logoPath="/java-logo.png" />
+                    <TechSkill name="Spring Boot" logoPath="/spring-boot.png" />
+                    <TechSkill name="C++" logoPath="/c-logo.png" />
+                    <TechSkill name="Python" logoPath="/python-logo.png" />
+                    <TechSkill name="SQL" logoPath="/sql-logo.png" />
                   </div>
                 </div>
 
@@ -265,10 +264,10 @@ export default function ResumePage() {
                 <div>
                   <h4 className="text-lg font-semibold text-sky-300 mb-3">Frontend</h4>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-                    <TechSkill name="JavaScript" logoPath="/javascript-logo.png" category="frontend" />
-                    <TechSkill name="TypeScript" logoPath="/typescipt-logo.webp" category="frontend" />
-                    <TechSkill name="React" logoPath="/react-logo.png" category="frontend" />
-                    <TechSkill name="Next.js" logoPath="/nextjs-logo.png" category="frontend" />
+                    <TechSkill name="JavaScript" logoPath="/javascript-logo.png" />
+                    <TechSkill name="TypeScript" logoPath="/typescipt-logo.webp" />
+                    <TechSkill name="React" logoPath="/react-logo.png" />
+                    <TechSkill name="Next.js" logoPath="/nextjs-logo.png" />
                   </div>
                 </div>
 
@@ -276,12 +275,12 @@ export default function ResumePage() {
                 <div>
                   <h4 className="text-lg font-semibold text-sky-300 mb-3">Tools & Technologies</h4>
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
-                    <TechSkill name="Docker" logoPath="/docker-logo.png" category="tools" />
-                    <TechSkill name="GraphQL" logoPath="/graphql-logo.png" category="tools" />
-                    <TechSkill name="Git" logoPath="/git-logo.png" category="tools" />
-                    <TechSkill name="Azure" logoPath="/azure-logo.png" category="tools" />
-                    <TechSkill name="REST API" logoPath="/rest-logo.png" category="tools" />
-                    <TechSkill name="Cursor" logoPath="/cursor-logo.png" category="tools" />
+                    <TechSkill name="Docker" logoPath="/docker-logo.png" />
+                    <TechSkill name="GraphQL" logoPath="/graphql-logo.png" />
+                    <TechSkill name="Git" logoPath="/git-logo.png" />
+                    <TechSkill name="Azure" logoPath="/azure-logo.png" />
+                    <TechSkill name="REST API" logoPath="/rest-logo.png" />
+                    <TechSkill name="Cursor" logoPath="/cursor-logo.png" />
                   </div>
                   <div className="mt-3 text-gray-300">
                     <span className="text-sky-300 font-medium">Additional:</span> JUnit Testing, Grafana, Postman, Vercel
