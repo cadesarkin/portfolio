@@ -1,7 +1,18 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
+  output: "standalone",
+  images: {
+    unoptimized: false,
+    remotePatterns: [],
+  },
+  reactStrictMode: true,
+  async redirects() {
+    return [
+      { source: "/contact", destination: "/", permanent: false },
+      { source: "/projects", destination: "/", permanent: false },
+    ]
+  },
+}
 
-export default nextConfig;
+export default nextConfig
