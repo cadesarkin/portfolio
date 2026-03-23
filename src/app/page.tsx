@@ -22,15 +22,15 @@ const workItems: (ModalData & { tag: string; cardDescription: string })[] = [
     type: "work",
     liveUrl: "https://vance-ad.com",
     description:
-      "Website for Vance, a designer clothing brand. Built with custom JavaScript, CSS, and HTML. New site under construction with React/Next.js and Stripe.",
+      "Website for Vance, a designer clothing brand. Built with React/Next.js and Stripe.",
   },
   {
     title: "dreamhouse",
-    cardDescription: "interior design studio website",
+    cardDescription: "creative design studio website",
     tag: "[client]",
     type: "work",
     liveUrl: "https://dreamhouse.nyc",
-    description: "Website for Dreamhouse, an interior design studio based in New York City.",
+    description: "Website for Dreamhouse, a creative design studio based in New York City.",
   },
 ]
 
@@ -41,17 +41,16 @@ const projectItems: (ModalData & { tag: string; cardDescription: string })[] = [
     tag: "[personal]",
     type: "project",
     githubUrl: "https://github.com/cadesarkin/threejs-learning-portfolio",
-    liveUrl: "https://threejs-learning-portfolio.vercel.app",
     description:
       "A collection of 3D graphics experiments built while learning Three.js. Explores lighting, geometry, animation, and shader techniques.",
   },
   {
     title: "matchplay",
-    cardDescription: "golf scorecard app",
+    cardDescription: "golf matching app",
     tag: "[in progress]",
     type: "project",
     githubUrl: "https://github.com/cadesarkin/matchplay",
-    description: "golf scorecard app. currently in development.",
+    description: "golf matching app. currently in development.",
   },
 ]
 
@@ -109,7 +108,7 @@ export default function Home() {
             {showLine2 && (
               <div className="mt-2 text-base sm:text-lg opacity-60">
                 <Typewriter
-                  text="software engineer. java/spring boot + react/next.js."
+                  text="software engineer. java · spring boot · typescript · react · next.js · sql · docker · graphql"
                   speed={40}
                   show={true}
                 />
