@@ -69,15 +69,29 @@ export default function ProjectModal({
             </div>
           )}
 
-          {type === "project" && githubUrl && (
-            <a
-              href={githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#2563eb] text-sm hover:underline"
-            >
-              view on github →
-            </a>
+          {type === "project" && (
+            <div className="flex flex-col gap-2">
+              {liveUrl && (
+                <a
+                  href={liveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#2563eb] text-sm hover:underline"
+                >
+                  view live →
+                </a>
+              )}
+              {githubUrl && (
+                <a
+                  href={githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#2563eb] text-sm hover:underline"
+                >
+                  view on github →
+                </a>
+              )}
+            </div>
           )}
         </div>
       </div>

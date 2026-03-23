@@ -41,6 +41,7 @@ const projectItems: (ModalData & { tag: string; cardDescription: string })[] = [
     tag: "[personal]",
     type: "project",
     githubUrl: "https://github.com/cadesarkin/threejs-learning-portfolio",
+    liveUrl: "https://threejs-learning-portfolio.vercel.app",
     description:
       "A collection of 3D graphics experiments built while learning Three.js. Explores lighting, geometry, animation, and shader techniques.",
   },
