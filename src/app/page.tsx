@@ -41,6 +41,7 @@ const projectItems: (ModalData & { tag: string; cardDescription: string })[] = [
     tag: "[personal]",
     type: "project",
     githubUrl: "https://github.com/cadesarkin/threejs-learning-portfolio",
+    liveUrl: "https://threejs-learning-portfolio.vercel.app",
     description:
       "A collection of 3D graphics experiments built while learning Three.js. Explores lighting, geometry, animation, and shader techniques.",
   },
@@ -108,7 +109,7 @@ export default function Home() {
             {showLine2 && (
               <div className="mt-2 text-base sm:text-lg opacity-60">
                 <Typewriter
-                  text="software engineer. java · spring boot · typescript · react · next.js · sql · docker · graphql"
+                  text="software engineer. java · spring boot · typescript · react · next.js"
                   speed={40}
                   show={true}
                 />
