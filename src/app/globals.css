@@ -107,3 +107,18 @@
   background: radial-gradient(ellipse at center, rgba(255,255,255,0.08) 0%, transparent 70%);
 }
 
+
+html {
+  scroll-behavior: smooth;
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
