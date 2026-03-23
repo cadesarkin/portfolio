@@ -4,7 +4,7 @@ import "./globals.css"
 
 const ibmPlexMono = IBM_Plex_Mono({
   subsets: ["latin"],
-  weight: ["300"],
+  weight: ["300", "400", "700"],
 })
 
 export const metadata: Metadata = {
@@ -18,8 +18,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={`${ibmPlexMono.className} bg-gradient-to-br from-gray-900 to-black min-h-screen`}>
+    <html lang="en" style={{ scrollBehavior: "smooth" }}>
+      <body
+        className={ibmPlexMono.className}
+        style={{ backgroundColor: "#eaeff5", color: "#0d0d0d", minHeight: "100vh" }}
+      >
         {children}
       </body>
     </html>
