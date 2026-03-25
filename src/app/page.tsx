@@ -16,6 +16,16 @@ interface ModalData {
 
 const workItems: (ModalData & { tag: string; cardDescription: string })[] = [
   {
+    title: "mozaiq",
+    cardDescription: "drag and drop dashboard builder",
+    tag: "[in progress]",
+    type: "project",
+    githubUrl: "https://github.com/zaiqapp/mozaiq",
+    liveUrl: "https://zaiq.app",
+    description:
+      "Drag and drop dashboard builder with AI generation. No code required. Open source for local hosting, with a hosted SaaS version at zaiq.app.",
+  },
+  {
     title: "vance",
     cardDescription: "clothing brand website",
     tag: "[client]",
@@ -44,16 +54,6 @@ const projectItems: (ModalData & { tag: string; cardDescription: string })[] = [
     liveUrl: "https://threejs-learning-portfolio.vercel.app",
     description:
       "A collection of 3D graphics experiments built while learning Three.js. Explores lighting, geometry, animation, and shader techniques.",
-  },
-  {
-    title: "mozaiq",
-    cardDescription: "drag and drop dashboard builder",
-    tag: "[in progress]",
-    type: "project",
-    githubUrl: "https://github.com/zaiqapp/mozaiq",
-    liveUrl: "https://zaiq.app",
-    description:
-      "Drag and drop dashboard builder with AI generation. No code required. Open source for local hosting, with a hosted SaaS version at zaiq.app.",
   },
   {
     title: "matchplay",
