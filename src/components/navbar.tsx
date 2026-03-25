@@ -23,7 +23,7 @@ export default function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-40">
       <div className="grid grid-cols-3 items-center px-6 py-5">
         {/* Left: clock */}
-        <div className="text-xs text-[#0d0d0d] opacity-40 font-light tabular-nums">
+        <div className="text-xs text-[#0d0d0d] font-light tabular-nums">
           {time}
         </div>
 
