@@ -4,12 +4,14 @@ import FolderView from "./FolderView"
 import TextView from "./TextView"
 import ContactView from "./ContactView"
 import ResumeView from "./ResumeView"
+import Terminal from "./Terminal"
 import type { VNode } from "@/lib/vfs-types"
 
 interface Props {
   node: VNode
   winId: string
   isMobile: boolean
+  onReboot: () => void
 }
 
 /** Shown for apps that later phases implement, so no folder is a dead end. */
@@ -37,7 +39,7 @@ function PlaceholderView({ node }: { node: VNode }) {
   )
 }
 
-export default function AppHost({ node, winId, isMobile }: Props) {
+export default function AppHost({ node, winId, isMobile, onReboot }: Props) {
   switch (node.kind) {
     case "dir":
       return <FolderView dir={node} winId={winId} isMobile={isMobile} />
@@ -49,6 +51,10 @@ export default function AppHost({ node, winId, isMobile }: Props) {
           return <ContactView />
         case "resume":
           return <ResumeView />
+        case "terminal":
+          return (
+            <Terminal winId={winId} isMobile={isMobile} onReboot={onReboot} />
+          )
         default:
           return <PlaceholderView node={node} />
       }

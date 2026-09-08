@@ -122,7 +122,7 @@ export default function BootSequence({ onDone }: Props) {
       }}
     >
       <div style={{ color: "#d7f7de", marginBottom: 2 }}>SARKIN BIOS v3.2</div>
-      <div style={{ color: "#2f6d43" }}>{"─".repeat(34)}</div>
+      <div style={{ color: "#2f6d43" }}>{"-".repeat(34)}</div>
 
       {post.slice(0, postShown).map(([k, v]) => (
         <div key={k}>
@@ -138,8 +138,8 @@ export default function BootSequence({ onDone }: Props) {
             </div>
           ))}
           <div style={{ marginTop: 12, color: "#2f6d43" }}>
-            [{"█".repeat(Math.round(progress * 28))}
-            {"░".repeat(28 - Math.round(progress * 28))}]{" "}
+            [{"#".repeat(Math.round(progress * 28))}
+            {".".repeat(28 - Math.round(progress * 28))}]{" "}
             {Math.round(progress * 100)}%
           </div>
         </div>

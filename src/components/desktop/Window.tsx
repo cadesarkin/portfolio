@@ -39,8 +39,15 @@ export default function Window({ win, isMobile, children }: Props) {
 
   // Move focus into the window when it opens or is raised, so keyboard users
   // land inside it rather than back at the top of the document.
+  //
+  // Skipped when focus is already somewhere inside: an app can claim it first
+  // (the terminal autofocuses its input), and effects run child-before-parent,
+  // so focusing unconditionally here would take it straight back.
   useEffect(() => {
-    if (isFocused) bodyRef.current?.focus({ preventScroll: true })
+    if (!isFocused) return
+    const el = elRef.current
+    if (el?.contains(document.activeElement)) return
+    bodyRef.current?.focus({ preventScroll: true })
   }, [isFocused])
 
   const startDrag = useCallback(

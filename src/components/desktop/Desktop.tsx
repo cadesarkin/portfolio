@@ -25,7 +25,7 @@ function useIsMobile() {
   return isMobile
 }
 
-function Shell({ booted }: { booted: boolean }) {
+function Shell({ booted, onReboot }: { booted: boolean; onReboot: () => void }) {
   const { wins, focused, open, close } = useWindows()
   const isMobile = useIsMobile()
 
@@ -61,7 +61,12 @@ function Shell({ booted }: { booted: boolean }) {
       <DesktopIcons isMobile={isMobile} revealed={booted} />
       {visible.map((w) => (
         <Window key={w.id} win={w} isMobile={isMobile}>
-          <AppHost node={w.node} winId={w.id} isMobile={isMobile} />
+          <AppHost
+            node={w.node}
+            winId={w.id}
+            isMobile={isMobile}
+            onReboot={onReboot}
+          />
         </Window>
       ))}
       <Taskbar />
@@ -94,9 +99,12 @@ export default function Desktop() {
     setBooting(false)
   }, [])
 
+  /** `reboot` in the terminal replays the sequence, flag or no flag. */
+  const reboot = useCallback(() => setBooting(true), [])
+
   return (
     <WindowProvider>
-      <Shell booted={booting === false} />
+      <Shell booted={booting === false} onReboot={reboot} />
       {booting && <BootSequence onDone={finishBoot} />}
     </WindowProvider>
   )

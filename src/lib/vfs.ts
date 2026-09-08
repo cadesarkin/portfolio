@@ -11,7 +11,7 @@ import { ROLES, SKILLS, EDUCATION, SUMMARY, IDENTITY } from "./resume"
 
 /** experience.txt is generated from the resume so the two cannot disagree. */
 function experienceBody(): string {
-  const head = [SUMMARY, "", "─".repeat(64), ""]
+  const head = [SUMMARY, "", "-".repeat(64), ""]
   const roles = ROLES.flatMap((r) => [
     `${r.company}`,
     `${r.title}`,
@@ -21,7 +21,7 @@ function experienceBody(): string {
     "",
   ])
   const edu = [
-    "─".repeat(64),
+    "-".repeat(64),
     "",
     EDUCATION.school,
     `${EDUCATION.degree} — ${EDUCATION.date}`,
