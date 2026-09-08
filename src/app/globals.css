@@ -377,3 +377,64 @@ a:hover {
 .ms-face:hover {
   background: rgba(255, 255, 255, 0.9);
 }
+
+/* ── Touch and small screens ─────────────────────────────── */
+
+/* Coarse pointers need a real target, not a 26px text row. */
+@media (pointer: coarse) {
+  .row {
+    min-height: 44px;
+    align-items: center;
+    padding: 8px 14px;
+  }
+
+  .win-buttons button {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .taskbar button {
+    padding: 6px 10px;
+  }
+}
+
+@media (max-width: 767px) {
+  .icon-btn {
+    width: 100%;
+    padding: 10px 4px;
+  }
+
+  /* Sheets are modal: the scrim makes that legible and swallows stray taps
+     on the icons still visible above them. */
+  .sheet-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 15;
+    background: rgba(6, 22, 38, 0.32);
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+  }
+
+  /* Wrap the description onto its own line rather than dropping it — on a
+     phone it is the only thing telling you what each client actually is. */
+  .row {
+    flex-wrap: wrap;
+    align-content: center;
+  }
+
+  /* The tag is ordered ahead of the description so it shares the name's line;
+     the full-width description would otherwise push it onto a third row. */
+  .row-tag {
+    order: 1;
+    margin-left: auto;
+  }
+
+  .row-desc {
+    order: 2;
+    flex: 1 0 100%;
+    white-space: normal;
+    font-size: 11.5px;
+    line-height: 1.4;
+    margin-top: 2px;
+  }
+}

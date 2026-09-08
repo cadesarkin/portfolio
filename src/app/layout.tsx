@@ -18,11 +18,15 @@ export const metadata: Metadata = {
     url: "https://cadesarkin.com",
     siteName: "Cade Sarkin",
     type: "profile",
+    // A capture of the desktop itself, so a shared link previews the actual
+    // site rather than a generic card.
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Cade Sarkin — ASCII desktop portfolio" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Cade Sarkin — Software Engineer",
     description: SUMMARY,
+    images: ["/og.png"],
   },
 }
 

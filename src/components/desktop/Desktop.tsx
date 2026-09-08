@@ -59,6 +59,13 @@ function Shell({ booted, onReboot }: { booted: boolean; onReboot: () => void }) 
     <>
       <BlissCanvas paused={covered || sheeted} />
       <DesktopIcons isMobile={isMobile} revealed={booted} />
+      {sheeted && (
+        <div
+          className="sheet-scrim"
+          aria-hidden="true"
+          onClick={() => visible[0] && close(visible[0].id)}
+        />
+      )}
       {visible.map((w) => (
         <Window key={w.id} win={w} isMobile={isMobile}>
           <AppHost
