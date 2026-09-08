@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react"
 import { useWindowKeys } from "@/components/desktop/use-window-keys"
+import { useSprites } from "@/components/desktop/sprites-context"
 import {
   createCanvas,
   paint,
@@ -37,6 +38,8 @@ export default function AsciiPaint({
   const [color, setColor] = useState(0)
   const [tool, setTool] = useState<Tool>("draw")
   const [copied, setCopied] = useState(false)
+  const [released, setReleased] = useState(false)
+  const { release, recallAll, count } = useSprites()
 
   const undoStack = useRef<Canvas[]>([])
   const drawing = useRef(false)
@@ -209,6 +212,31 @@ export default function AsciiPaint({
         >
           .txt
         </button>
+        <button
+          type="button"
+          className="seg"
+          onClick={() => {
+            if (!release(canvas)) return
+            pushUndo(canvas)
+            setCanvas(clear(canvas))
+            setReleased(true)
+            setTimeout(() => setReleased(false), 1600)
+          }}
+          disabled={isBlank(canvas)}
+          title="Send this drawing out onto the desktop"
+        >
+          {released ? "released" : "set free"}
+        </button>
+        {count > 0 && (
+          <button
+            type="button"
+            className="seg"
+            onClick={recallAll}
+            title="Clear every drawing floating on the desktop"
+          >
+            recall {count}
+          </button>
+        )}
       </div>
 
       {/* Character and colour palettes */}
@@ -312,8 +340,8 @@ export default function AsciiPaint({
         }}
       >
         {isMobile
-          ? "drag to draw · pick a character above"
-          : "drag to draw · b draw · e erase · g fill · ctrl+z undo"}
+          ? "drag to draw · \"set free\" sends it onto the desktop"
+          : 'drag to draw · b draw · e erase · g fill · ctrl+z undo · "set free" sends it onto the desktop'}
       </div>
     </div>
   )

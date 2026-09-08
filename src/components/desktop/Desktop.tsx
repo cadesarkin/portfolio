@@ -6,6 +6,8 @@ import BootSequence from "./BootSequence"
 import DesktopIcons from "./DesktopIcons"
 import Taskbar from "./Taskbar"
 import Screensaver from "./Screensaver"
+import DesktopSprites from "./DesktopSprites"
+import { SpriteProvider } from "./sprites-context"
 import Window from "./Window"
 import { WindowProvider, useWindows } from "./window-manager"
 import { ThemeProvider, useTheme } from "./theme-context"
@@ -14,7 +16,6 @@ import AppHost from "@/components/apps/AppHost"
 import { resolve } from "@/lib/vfs-utils"
 
 const MOBILE_BREAKPOINT = 768
-const BOOT_FLAG = "sarkin.booted"
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false)
@@ -85,6 +86,7 @@ function Shell({ booted, onReboot }: { booted: boolean; onReboot: () => void }) 
           />
         </Window>
       ))}
+      <DesktopSprites />
       <Taskbar />
       <Screensaver enabled={booted} />
     </>
@@ -97,24 +99,15 @@ export default function Desktop() {
   const [booting, setBooting] = useState<boolean | null>(null)
 
   useEffect(() => {
-    let skip = false
-    try {
-      skip = localStorage.getItem(BOOT_FLAG) === "1"
-    } catch {
-      // Storage throws in some privacy modes; boot anyway.
-    }
+    // Plays on every load rather than once per visitor. It is the first
+    // impression the site makes, it lasts under three seconds, and any key
+    // skips it instantly — a flag meant most people never saw it twice, and
+    // the owner never saw it again at all.
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    setBooting(!skip && !reduced)
+    setBooting(!reduced)
   }, [])
 
-  const finishBoot = useCallback(() => {
-    try {
-      localStorage.setItem(BOOT_FLAG, "1")
-    } catch {
-      // Non-fatal; the sequence simply replays next visit.
-    }
-    setBooting(false)
-  }, [])
+  const finishBoot = useCallback(() => setBooting(false), [])
 
   /** `reboot` in the terminal replays the sequence, flag or no flag. */
   const reboot = useCallback(() => setBooting(true), [])
@@ -122,10 +115,12 @@ export default function Desktop() {
   return (
     <ThemeProvider>
       <WallpaperProvider>
+      <SpriteProvider>
       <WindowProvider>
         <Shell booted={booting === false} onReboot={reboot} />
         {booting && <BootSequence onDone={finishBoot} />}
       </WindowProvider>
+      </SpriteProvider>
       </WallpaperProvider>
     </ThemeProvider>
   )
