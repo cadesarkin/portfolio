@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useWindowKeys } from "@/components/desktop/use-window-keys"
+import { useTheme } from "@/components/desktop/theme-context"
+import { GAME_COLORS } from "@/lib/theme"
 import { useCanvasSize, useGameLoop } from "./useGameShell"
 import { GameFrame, TouchPad } from "./GameFrame"
 
@@ -55,6 +57,7 @@ export default function Pong({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const { w, h } = useCanvasSize(canvasRef, wrapRef)
+  const { theme } = useTheme()
 
   const state = useRef<State>(initial())
   const [scores, setScores] = useState({ player: 0, ai: 0 })
@@ -154,11 +157,12 @@ export default function Pong({
       raf = requestAnimationFrame(draw)
       const s = state.current
 
-      ctx.fillStyle = "rgba(244,249,253,0.92)"
+      const C = GAME_COLORS[theme]
+      ctx.fillStyle = C.court
       ctx.fillRect(0, 0, w, h)
 
       // Centre line.
-      ctx.strokeStyle = "rgba(20,40,60,0.22)"
+      ctx.strokeStyle = C.courtLine
       ctx.setLineDash([5, 7])
       ctx.beginPath()
       ctx.moveTo(w / 2, 0)
@@ -167,18 +171,18 @@ export default function Pong({
       ctx.setLineDash([])
 
       const ph = PADDLE_H * h
-      ctx.fillStyle = "#1d6fd0"
+      ctx.fillStyle = C.player
       ctx.fillRect(6, s.playerY * h - ph / 2, PADDLE_W, ph)
-      ctx.fillStyle = "#4a9b2f"
+      ctx.fillStyle = C.cubeTop
       ctx.fillRect(w - 6 - PADDLE_W, s.aiY * h - ph / 2, PADDLE_W, ph)
 
-      ctx.fillStyle = "#0d1b26"
+      ctx.fillStyle = C.ball
       ctx.fillRect(s.ballX * w - BALL / 2, s.ballY * h - BALL / 2, BALL, BALL)
     }
 
     raf = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(raf)
-  }, [w, h])
+  }, [w, h, theme])
 
   // Mouse controls the paddle directly — the most natural Pong input.
   const onPointerMove = (e: React.PointerEvent) => {

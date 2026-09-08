@@ -12,17 +12,28 @@
  */
 
 import { useEffect, useRef } from "react"
-import { PALETTE, SKY_RAMP, GRASS_RAMP, type RGB } from "@/lib/bliss-palette"
+import { SKY_RAMP, GRASS_RAMP } from "@/lib/bliss-palette"
+import { WALLPAPER, type RGB, type Theme } from "@/lib/theme"
 
 interface Props {
   /** Halts the render loop — set when a maximized window covers the screen. */
   paused?: boolean
+  theme?: Theme
 }
 
-export default function BlissCanvas({ paused = false }: Props) {
+/** Seconds for a full day/night crossfade. */
+const FADE = 0.9
+
+export default function BlissCanvas({ paused = false, theme = "day" }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pausedRef = useRef(paused)
   pausedRef.current = paused
+  /** 0 = day, 1 = night. Eased toward the target so the switch is a fade. */
+  const nightRef = useRef(theme === "night" ? 1 : 0)
+  const targetRef = useRef(theme === "night" ? 1 : 0)
+  targetRef.current = theme === "night" ? 1 : 0
+  /** Repaints the single static frame drawn under reduced motion. */
+  const redrawStatic = useRef<((night: number) => void) | null>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -125,10 +136,35 @@ export default function BlissCanvas({ paused = false }: Props) {
       )
     }
 
-    const sky0: RGB = PALETTE.skyTop
-    const sky1: RGB = PALETTE.skyHorizon
-    const hill0: RGB = PALETTE.hillDark
-    const hill1: RGB = PALETTE.hillLight
+    const DAY = WALLPAPER.day
+    const NIGHT = WALLPAPER.night
+
+    // Recomputed whenever the fade advances, not per cell.
+    let sky0: RGB = DAY.skyTop
+    let sky1: RGB = DAY.skyHorizon
+    let hill0: RGB = DAY.hillDark
+    let hill1: RGB = DAY.hillLight
+    let cloudRGB: RGB = DAY.cloud
+    let inkMix = DAY.ink
+    /** 0 = glyph density follows darkness (day), 1 = follows light (night). */
+    let nightMix = 0
+
+    const mixRGB = (a: RGB, b: RGB, t: number): RGB => [
+      lerp(a[0], b[0], t),
+      lerp(a[1], b[1], t),
+      lerp(a[2], b[2], t),
+    ]
+
+    function applyTheme(t: number) {
+      nightMix = t
+      sky0 = mixRGB(DAY.skyTop, NIGHT.skyTop, t)
+      sky1 = mixRGB(DAY.skyHorizon, NIGHT.skyHorizon, t)
+      hill0 = mixRGB(DAY.hillDark, NIGHT.hillDark, t)
+      hill1 = mixRGB(DAY.hillLight, NIGHT.hillLight, t)
+      cloudRGB = mixRGB(DAY.cloud, NIGHT.cloud, t)
+      inkMix = lerp(DAY.ink, NIGHT.ink, t)
+      colorCache.clear()
+    }
 
     // Written by shade(), read by draw(). Avoids allocating per cell.
     let oR = 0
@@ -174,19 +210,24 @@ export default function BlissCanvas({ paused = false }: Props) {
 
           if (d > 0.01) {
             const w = ss(0.0, 0.62, d)
-            r = lerp(r, 255, w)
-            g = lerp(g, 255, w)
-            b = lerp(b, 255, w)
-            const cb = 0.45 + 0.55 * d
+            r = lerp(r, cloudRGB[0], w)
+            g = lerp(g, cloudRGB[1], w)
+            b = lerp(b, cloudRGB[2], w)
+            // By day a cloud is the brightest thing in frame and can max the
+            // ramp. At night that same maximum reads as a solid slab, so the
+            // cloud's contribution is capped well short of it.
+            const cb = lerp(0.45 + 0.55 * d, 0.26 + 0.3 * d, nightMix)
             if (cb > bright) bright = cb
           }
         }
         oR = r
         oG = g
         oB = b
-        // Ink density is the inverse of brightness: the deep zenith carries
-        // the heaviest glyphs, and sunlit cloud tops come out nearly blank.
-        const ink = 1 - bright
+        // By day the densest glyphs sit where the sky is darkest — ink on
+        // paper, with sunlit cloud tops nearly blank. At night that inverts:
+        // glyphs are light on a dark field, so density follows brightness.
+        // Interpolating the two keeps the crossfade continuous.
+        const ink = lerp(1 - bright, bright, nightMix)
         oCh = SKY_RAMP.charAt(Math.round(ink * (SKY_RAMP.length - 1)))
       } else {
         const dy = y - hy
@@ -211,9 +252,10 @@ export default function BlissCanvas({ paused = false }: Props) {
         oR = lerp(hill0[0], hill1[0], lum)
         oG = lerp(hill0[1], hill1[1], lum)
         oB = lerp(hill0[2], hill1[2], lum)
-        // Same inversion as the sky: shadowed grass takes the denser glyphs.
+        // Same flip as the sky.
+        const gd = lerp(1 - lum, lum, nightMix)
         oCh = GRASS_RAMP.charAt(
-          Math.round((0.28 + 0.66 * (1 - lum)) * (GRASS_RAMP.length - 1))
+          Math.round((0.28 + 0.66 * gd) * (GRASS_RAMP.length - 1))
         )
       }
     }
@@ -229,7 +271,7 @@ export default function BlissCanvas({ paused = false }: Props) {
     }
 
     function draw() {
-      const ink = CONFIG.inkMix
+      const ink = inkMix
 
       for (let row = 0; row < rows; row++) {
         const y = (row + 0.5) / rows
@@ -241,12 +283,13 @@ export default function BlissCanvas({ paused = false }: Props) {
           rowCh[col] = oCh
           // Glyphs are a darkened version of the colour behind them, so the
           // texture shades the scene instead of fighting it.
+          // Clamped: the night multiplier brightens past 255 on pale cells.
           rowFg[col] =
             oCh === " "
               ? -1
-              : (((oR * ink) & 0xf0) << 16) |
-                (((oG * ink) & 0xf0) << 8) |
-                ((oB * ink) & 0xf0)
+              : ((Math.min(255, oR * ink) & 0xf0) << 16) |
+                ((Math.min(255, oG * ink) & 0xf0) << 8) |
+                (Math.min(255, oB * ink) & 0xf0)
           rowBg[col] =
             ((oR & 0xf8) << 16) | ((oG & 0xf8) << 8) | (oB & 0xf8)
         }
@@ -327,13 +370,30 @@ export default function BlissCanvas({ paused = false }: Props) {
 
     function frame(now: number) {
       raf = requestAnimationFrame(frame)
+      const dt = Math.min((now - last) / 1000, 0.1)
+
+      // The crossfade runs even while the wallpaper is otherwise paused —
+      // switching theme behind a maximized window would leave it stale
+      // otherwise, and it would snap when the window closed.
+      const fading = Math.abs(nightRef.current - targetRef.current) > 0.001
+      if (fading) {
+        const dir = Math.sign(targetRef.current - nightRef.current)
+        nightRef.current = Math.max(
+          0,
+          Math.min(1, nightRef.current + dir * (dt / FADE))
+        )
+        applyTheme(nightRef.current)
+      }
+
       if (pausedRef.current || document.hidden) {
         last = now
+        if (fading) draw()
         return
       }
+
       const interval = 1000 / CONFIG.fps
-      if (now - last < interval) return
-      T += Math.min((now - last) / 1000, 0.1)
+      if (!fading && now - last < interval) return
+      T += dt
       last = now
       draw()
     }
@@ -348,6 +408,12 @@ export default function BlissCanvas({ paused = false }: Props) {
     }
     window.addEventListener("resize", onResize)
 
+    applyTheme(nightRef.current)
+    redrawStatic.current = (night: number) => {
+      nightRef.current = night
+      applyTheme(night)
+      draw()
+    }
     resize()
     if (reduced) {
       // One representative frame, mid-drift, and no loop at all.
@@ -361,8 +427,16 @@ export default function BlissCanvas({ paused = false }: Props) {
       cancelAnimationFrame(raf)
       clearTimeout(resizeTimer)
       window.removeEventListener("resize", onResize)
+      redrawStatic.current = null
     }
   }, [])
+
+  // Under reduced motion there is no loop to advance the crossfade, so repaint
+  // the single static frame whenever the theme changes.
+  useEffect(() => {
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+    redrawStatic.current?.(theme === "night" ? 1 : 0)
+  }, [theme])
 
   return (
     <canvas
@@ -373,7 +447,7 @@ export default function BlissCanvas({ paused = false }: Props) {
         inset: 0,
         zIndex: 0,
         display: "block",
-        background: PALETTE.base,
+        background: "var(--base)",
       }}
     />
   )

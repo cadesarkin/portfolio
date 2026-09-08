@@ -96,6 +96,25 @@ describe("run — windows", () => {
     expect(run("clear", "/").clear).toBe(true)
   })
 
+  it("theme with no argument toggles", () => {
+    expect(run("theme", "/").theme).toBe("toggle")
+  })
+
+  it("theme accepts a named theme", () => {
+    expect(run("theme night", "/").theme).toBe("night")
+    expect(run("theme day", "/").theme).toBe("day")
+  })
+
+  it("theme is case-insensitive", () => {
+    expect(run("theme NIGHT", "/").theme).toBe("night")
+  })
+
+  it("theme rejects an unknown value without changing anything", () => {
+    const r = run("theme purple", "/")
+    expect(r.theme).toBeUndefined()
+    expect(text(r)).toMatch(/usage: theme/i)
+  })
+
   it("reboot signals a reboot", () => {
     expect(run("reboot", "/").reboot).toBe(true)
   })

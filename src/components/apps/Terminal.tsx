@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useWindows } from "@/components/desktop/window-manager"
+import { useTheme } from "@/components/desktop/theme-context"
 import { resolve } from "@/lib/vfs-utils"
 import { run, completeInput, type Line } from "./terminal/commands"
 
@@ -27,6 +28,7 @@ interface Props {
 
 export default function Terminal({ winId, isMobile, onReboot }: Props) {
   const { open, close } = useWindows()
+  const { setTheme, toggle: toggleTheme } = useTheme()
   const [lines, setLines] = useState<Line[]>(BANNER)
   const [cwd, setCwd] = useState("/")
   const [input, setInput] = useState("")
@@ -86,6 +88,10 @@ export default function Terminal({ winId, isMobile, onReboot }: Props) {
           open(node)
         }
       }
+    }
+    if (result.theme) {
+      if (result.theme === "toggle") toggleTheme()
+      else setTheme(result.theme)
     }
     if (result.reboot) onReboot()
     if (result.closeWin) close(winId)

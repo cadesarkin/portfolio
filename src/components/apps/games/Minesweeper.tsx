@@ -10,25 +10,26 @@ import {
   type Board,
 } from "./engine/minesweeper"
 import { GameFrame } from "./GameFrame"
+import { useTheme } from "@/components/desktop/theme-context"
 
 const W = 9
 const H = 9
 const MINES = 10
 
-/** Classic Minesweeper number colours, restated in the site's ink palette. */
-const NUM_COLOR = [
-  "",
-  "#1d6fd0",
-  "#2c7a3f",
-  "#c0392b",
-  "#5b3fa8",
-  "#a8631f",
-  "#158b8b",
-  "#0d1b26",
-  "#6b7b88",
-]
+/**
+ * Classic Minesweeper number colours.
+ *
+ * The night set is lifted and desaturated: the daylight blues and purples
+ * fall below readable contrast on a dark cell.
+ */
+const NUM_COLOR: Record<"day" | "night", string[]> = {
+  day: ["", "#1d6fd0", "#2c7a3f", "#c0392b", "#5b3fa8", "#a8631f", "#158b8b", "#0d1b26", "#6b7b88"],
+  night: ["", "#6ab7ff", "#6ed08a", "#ff7a6b", "#c0a2ff", "#f0b24d", "#5fd6d6", "#dbe9f5", "#93a7b8"],
+}
 
 export default function Minesweeper({ isMobile }: { isMobile: boolean }) {
+  const { theme } = useTheme()
+  const numColor = NUM_COLOR[theme]
   const [board, setBoard] = useState<Board>(() => createBoard(W, H, MINES))
   const [elapsed, setElapsed] = useState(0)
   const longPress = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -129,16 +130,16 @@ export default function Minesweeper({ isMobile }: { isMobile: boolean }) {
                 touchAction: "manipulation",
                 color:
                   cell.mine && shown
-                    ? "#c0392b"
-                    : NUM_COLOR[cell.adj] || "var(--ink)",
+                    ? numColor[3]
+                    : numColor[cell.adj] || "var(--ink)",
                 // Hidden cells sit clearly darker and raised; revealed ones go
                 // flat and near-white. At closer values the two states were
                 // hard to tell apart at a glance, which is the whole game.
                 background: shown
                   ? cell.mine
                     ? "rgba(192,57,43,0.22)"
-                    : "rgba(255,255,255,0.78)"
-                  : "rgba(176,197,216,0.95)",
+                    : "var(--cell-shown)"
+                  : "var(--cell-hidden)",
                 border: shown
                   ? "1px solid rgba(20,40,60,0.08)"
                   : "1px solid rgba(255,255,255,0.9)",

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useWindowKeys } from "@/components/desktop/use-window-keys"
+import { useTheme } from "@/components/desktop/theme-context"
+import { GAME_COLORS } from "@/lib/theme"
 import { useCanvasSize, useGameLoop, useHighScore } from "./useGameShell"
 import { GameFrame, TouchPad } from "./GameFrame"
 
@@ -81,6 +83,7 @@ export default function CubeRunner({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const { w, h } = useCanvasSize(canvasRef, wrapRef)
+  const { theme } = useTheme()
 
   const state = useRef<State>(initial())
   const [score, setScore] = useState(0)
@@ -174,15 +177,16 @@ export default function CubeRunner({
       const s = state.current
 
       // Sky and ground.
+      const C = GAME_COLORS[theme]
       const sky = ctx.createLinearGradient(0, 0, 0, horizon)
-      sky.addColorStop(0, "#266cc4")
-      sky.addColorStop(1, "#9ad0f0")
+      sky.addColorStop(0, C.skyTop)
+      sky.addColorStop(1, C.skyBottom)
       ctx.fillStyle = sky
       ctx.fillRect(0, 0, w, horizon)
 
       const ground = ctx.createLinearGradient(0, horizon, 0, h)
-      ground.addColorStop(0, "#a9cf72")
-      ground.addColorStop(1, "#4a9b2f")
+      ground.addColorStop(0, C.groundTop)
+      ground.addColorStop(1, C.groundBottom)
       ctx.fillStyle = ground
       ctx.fillRect(0, horizon, w, h - horizon)
 
@@ -197,7 +201,7 @@ export default function CubeRunner({
         if (sy > h) continue
         const l = project(-TRACK - 0.9, z)
         const r = project(TRACK + 0.9, z)
-        ctx.strokeStyle = "rgba(12,40,20,0.30)"
+        ctx.strokeStyle = C.gridLine
         ctx.globalAlpha = Math.max(0, 1 - (z - PLAYER_Z) / FAR)
         ctx.beginPath()
         ctx.moveTo(l.sx, sy)
@@ -207,7 +211,7 @@ export default function CubeRunner({
 
       // Track edges.
       ctx.globalAlpha = 0.85
-      ctx.strokeStyle = "rgba(250,252,255,0.85)"
+      ctx.strokeStyle = C.trackEdge
       ctx.lineWidth = 2
       for (const edge of [-TRACK - 0.9, TRACK + 0.9]) {
         const near = project(edge, 0.35)
@@ -234,15 +238,15 @@ export default function CubeRunner({
 
         const top = base.sy - size * 1.9
         // Front face.
-        ctx.fillStyle = "#2f6d43"
-        ctx.strokeStyle = "#0d2b18"
+        ctx.fillStyle = C.cubeFace
+        ctx.strokeStyle = C.cubeEdge
         ctx.beginPath()
         ctx.rect(base.sx - size, top, size * 2, size * 1.9)
         ctx.fill()
         ctx.stroke()
         // Top face, offset toward the horizon for a hint of solidity.
         const inset = size * 0.42
-        ctx.fillStyle = "#4f9a5f"
+        ctx.fillStyle = C.cubeTop
         ctx.beginPath()
         ctx.moveTo(base.sx - size, top)
         ctx.lineTo(base.sx - size + inset, top - inset)
@@ -257,8 +261,8 @@ export default function CubeRunner({
       // Player, projected the same way so it shares the cubes' geometry.
       const p = project(s.x, PLAYER_Z)
       const psize = CUBE * K * p.s * 1.15
-      ctx.fillStyle = s.dead ? "#c0392b" : "#1d6fd0"
-      ctx.strokeStyle = "#08243c"
+      ctx.fillStyle = s.dead ? C.playerDead : C.player
+      ctx.strokeStyle = C.cubeEdge
       ctx.beginPath()
       ctx.moveTo(p.sx, p.sy - psize * 1.7)
       ctx.lineTo(p.sx + psize, p.sy)
@@ -271,7 +275,7 @@ export default function CubeRunner({
 
     raf = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(raf)
-  }, [w, h])
+  }, [w, h, theme])
 
   return (
     <GameFrame

@@ -7,6 +7,7 @@ import DesktopIcons from "./DesktopIcons"
 import Taskbar from "./Taskbar"
 import Window from "./Window"
 import { WindowProvider, useWindows } from "./window-manager"
+import { ThemeProvider, useTheme } from "./theme-context"
 import AppHost from "@/components/apps/AppHost"
 import { resolve } from "@/lib/vfs-utils"
 
@@ -27,6 +28,7 @@ function useIsMobile() {
 
 function Shell({ booted, onReboot }: { booted: boolean; onReboot: () => void }) {
   const { wins, focused, open, close } = useWindows()
+  const { theme } = useTheme()
   const isMobile = useIsMobile()
 
   // Global shortcuts. Everything else routes through focus-scoped delegation.
@@ -57,7 +59,7 @@ function Shell({ booted, onReboot }: { booted: boolean; onReboot: () => void }) 
 
   return (
     <>
-      <BlissCanvas paused={covered || sheeted} />
+      <BlissCanvas paused={covered || sheeted} theme={theme} />
       <DesktopIcons isMobile={isMobile} revealed={booted} />
       {sheeted && (
         <div
@@ -110,9 +112,11 @@ export default function Desktop() {
   const reboot = useCallback(() => setBooting(true), [])
 
   return (
-    <WindowProvider>
-      <Shell booted={booting === false} onReboot={reboot} />
-      {booting && <BootSequence onDone={finishBoot} />}
-    </WindowProvider>
+    <ThemeProvider>
+      <WindowProvider>
+        <Shell booted={booting === false} onReboot={reboot} />
+        {booting && <BootSequence onDone={finishBoot} />}
+      </WindowProvider>
+    </ThemeProvider>
   )
 }

@@ -23,10 +23,58 @@
 
   --taskbar-h: 32px;
   --titlebar-h: 28px;
+
+  --icon-label-bg: rgba(8, 26, 44, 0.55);
+  --icon-hover: rgba(255, 255, 255, 0.16);
+  --icon-hover-border: rgba(255, 255, 255, 0.4);
+  --win-shadow: rgba(6, 22, 38, 0.22);
+  --win-shadow-focus: rgba(6, 22, 38, 0.3);
+  --accent-wash: rgba(29, 111, 208, 0.12);
+  --accent-wash-strong: rgba(29, 111, 208, 0.22);
+  --cell-hidden: rgba(176, 197, 216, 0.95);
+  --cell-shown: rgba(255, 255, 255, 0.78);
+}
+
+/* ── Night ───────────────────────────────────────────────────
+   Only the tokens change; every rule below is written once and
+   works in both themes. */
+[data-theme="night"] {
+  --base: #04080f;
+  --ink: #dbe9f5;
+  --ink-muted: rgba(219, 233, 245, 0.62);
+  --ink-faint: rgba(219, 233, 245, 0.34);
+  --accent: #6ab7ff;
+
+  --win-fill: rgba(16, 27, 41, 0.8);
+  --win-fill-focus: rgba(21, 34, 50, 0.9);
+  --win-border: rgba(150, 190, 220, 0.26);
+  --win-border-focus: rgba(150, 190, 220, 0.46);
+  --win-rule: rgba(150, 190, 220, 0.16);
+
+  --icon-label-bg: rgba(6, 14, 26, 0.55);
+  --icon-hover: rgba(160, 200, 235, 0.14);
+  --icon-hover-border: rgba(160, 200, 235, 0.36);
+  --win-shadow: rgba(0, 0, 0, 0.45);
+  --win-shadow-focus: rgba(0, 0, 0, 0.6);
+  --accent-wash: rgba(106, 183, 255, 0.14);
+  --accent-wash-strong: rgba(106, 183, 255, 0.24);
+  --cell-hidden: rgba(46, 66, 88, 0.95);
+  --cell-shown: rgba(10, 20, 32, 0.7);
 }
 
 html {
   background: var(--base);
+  transition: background-color 900ms ease;
+}
+
+.win,
+.taskbar,
+.win-bar,
+.icon-btn > span:last-child {
+  transition:
+    background-color 900ms ease,
+    border-color 900ms ease,
+    color 900ms ease;
 }
 
 body {
@@ -38,7 +86,7 @@ body {
 }
 
 ::selection {
-  background: rgba(29, 111, 208, 0.25);
+  background: var(--accent-wash-strong);
 }
 
 /* Visible to screen readers and crawlers, not to sighted users. Clipped
@@ -65,7 +113,7 @@ body {
   backdrop-filter: blur(10px) saturate(1.1);
   -webkit-backdrop-filter: blur(10px) saturate(1.1);
   border: 1px solid var(--win-border);
-  box-shadow: 0 6px 22px rgba(6, 22, 38, 0.22);
+  box-shadow: 0 6px 22px var(--win-shadow);
   opacity: 0.94;
   transition:
     opacity 120ms ease-out,
@@ -76,7 +124,7 @@ body {
 .win[data-focused] {
   background: var(--win-fill-focus);
   border-color: var(--win-border-focus);
-  box-shadow: 0 10px 34px rgba(6, 22, 38, 0.3);
+  box-shadow: 0 10px 34px var(--win-shadow-focus);
   opacity: 1;
 }
 
@@ -205,14 +253,14 @@ body {
 .icon-btn > span:last-child {
   padding: 1px 5px;
   border-radius: 2px;
-  background: rgba(8, 26, 44, 0.55);
+  background: var(--icon-label-bg);
   text-shadow: 0 1px 2px rgba(4, 18, 32, 0.9);
 }
 
 .icon-btn:hover,
 .icon-btn:focus-visible {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: var(--icon-hover);
+  border-color: var(--icon-hover-border);
   outline: none;
 }
 
@@ -265,8 +313,8 @@ body {
 
 .taskbar button[data-active] {
   color: var(--ink);
-  background: rgba(29, 111, 208, 0.12);
-  border-color: rgba(29, 111, 208, 0.35);
+  background: var(--accent-wash);
+  border-color: var(--accent);
 }
 
 .taskbar button:focus-visible {
@@ -274,8 +322,11 @@ body {
   outline-offset: 1px;
 }
 
-.clock {
+.theme-toggle {
   margin-left: auto;
+}
+
+.clock {
   color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
   padding-right: 4px;
@@ -300,11 +351,11 @@ body {
 }
 
 .row:hover {
-  background: rgba(29, 111, 208, 0.08);
+  background: var(--accent-wash);
 }
 
 .row[data-selected] {
-  background: rgba(29, 111, 208, 0.14);
+  background: var(--accent-wash-strong);
   border-left-color: var(--accent);
 }
 
@@ -369,13 +420,13 @@ a:hover {
   font-size: 13px;
   padding: 2px 10px;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--cell-shown);
   border: 1px solid var(--win-border);
   cursor: pointer;
 }
 
 .ms-face:hover {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--accent-wash);
 }
 
 /* ── Touch and small screens ─────────────────────────────── */

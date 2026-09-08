@@ -37,6 +37,8 @@ export interface CmdResult {
   clear?: boolean
   reboot?: boolean
   closeWin?: boolean
+  /** "toggle" flips it; a named theme sets it outright. */
+  theme?: "day" | "night" | "toggle"
 }
 
 interface Cmd {
@@ -290,6 +292,17 @@ export const COMMANDS: Record<string, Cmd> = {
     run: () => ({
       lines: out(`up ${tenure()}, 1 user, load average: caffeinated`),
     }),
+  },
+
+  theme: {
+    help: "switch between day and night",
+    run: (args) => {
+      const arg = (args[0] ?? "toggle").toLowerCase()
+      if (arg === "day" || arg === "night")
+        return { lines: dim(`theme -> ${arg}`), theme: arg }
+      if (arg === "toggle") return { theme: "toggle" }
+      return { lines: err("usage: theme [day|night|toggle]") }
+    },
   },
 
   clear: {

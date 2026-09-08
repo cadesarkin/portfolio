@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useWindows } from "./window-manager"
+import { useTheme } from "./theme-context"
 
 function Clock() {
   const [now, setNow] = useState<string>("")
@@ -30,6 +31,7 @@ function Clock() {
 
 export default function Taskbar() {
   const { wins, focused, focus, minimize, minimizeAll } = useWindows()
+  const { theme, toggle } = useTheme()
 
   return (
     <div className="taskbar">
@@ -46,6 +48,19 @@ export default function Taskbar() {
           {w.title}
         </button>
       ))}
+      <button
+        type="button"
+        onClick={toggle}
+        // Keeps keyboard focus in whatever window the user was using. Without
+        // this, clicking the toggle moves focus to the button, and the next
+        // thing typed goes to it — a space then re-triggers the toggle.
+        onMouseDown={(e) => e.preventDefault()}
+        className="theme-toggle"
+        title={theme === "day" ? "Switch to night" : "Switch to day"}
+        aria-label={theme === "day" ? "Switch to night" : "Switch to day"}
+      >
+        {theme === "day" ? "day" : "night"}
+      </button>
       <Clock />
     </div>
   )
