@@ -41,10 +41,20 @@ export default function BootSequence({ onDone }: Props) {
   const finish = useRef(onDone)
   finish.current = onDone
 
-  // Any input skips the whole sequence.
+  /**
+   * Any input skips the whole sequence — but not the input that started it.
+   *
+   * `reboot` is submitted with Enter. React mounts this component
+   * synchronously while that keydown is still propagating, so a listener
+   * attached here immediately receives the very same event and skips before a
+   * single frame is drawn. The grace period ignores anything that arrives in
+   * the moment the sequence appears, which also stops a stray double-tap from
+   * eating it.
+   */
   useEffect(() => {
+    const armedAt = performance.now() + 300
     const skip = () => {
-      if (done.current) return
+      if (done.current || performance.now() < armedAt) return
       done.current = true
       finish.current()
     }
