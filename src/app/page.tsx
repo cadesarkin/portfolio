@@ -1,5 +1,11 @@
-import BlissCanvas from "@/components/desktop/BlissCanvas"
+import Desktop from "@/components/desktop/Desktop"
+import SeoContent from "@/components/desktop/SeoContent"
 
 export default function Page() {
-  return <BlissCanvas />
+  return (
+    <>
+      <SeoContent />
+      <Desktop />
+    </>
+  )
 }

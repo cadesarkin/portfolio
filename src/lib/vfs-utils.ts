@@ -52,7 +52,7 @@ export function resolve(path: string, cwd: string): VNode | null {
   let node: VNode = root
   for (const seg of stack) {
     if (!isDir(node)) return null
-    const next = node.children.find((c) => c.name === seg)
+    const next: VNode | undefined = node.children.find((c) => c.name === seg)
     if (!next) return null
     node = next
   }

@@ -2,123 +2,364 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-  }
+/* ─────────────────────────────────────────────────────────────
+   ASCII-native desktop chrome.
+   Windows are frosted panels with hairline borders and dark text,
+   sitting over the bright Bliss wallpaper.
+   ───────────────────────────────────────────────────────────── */
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-  }
+:root {
+  --base: #0d2137;
+  --ink: #0d1b26;
+  --ink-muted: rgba(13, 27, 38, 0.55);
+  --ink-faint: rgba(13, 27, 38, 0.32);
+  --accent: #1d6fd0;
+
+  --win-fill: rgba(250, 252, 255, 0.82);
+  --win-fill-focus: rgba(252, 253, 255, 0.9);
+  --win-border: rgba(20, 40, 60, 0.35);
+  --win-border-focus: rgba(20, 40, 60, 0.55);
+  --win-rule: rgba(20, 40, 60, 0.18);
+
+  --taskbar-h: 32px;
+  --titlebar-h: 28px;
 }
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
-@keyframes loadingProgress {
-  from {
-    width: 0%;
-  }
-  to {
-    width: 100%;
-  }
-}
-
-@keyframes shine {
-  0% {
-    transform: translateX(-100%) skewX(-12deg);
-  }
-  100% {
-    transform: translateX(300%) skewX(-12deg);
-  }
-}
-
-@keyframes shine-slow {
-  0% {
-    transform: translateX(-100%) skewX(-12deg);
-  }
-  100% {
-    transform: translateX(300%) skewX(-12deg);
-  }
-}
-
-.animate-shine {
-  animation: shine 3s ease-in-out infinite;
-}
-
-.animate-shine-slow {
-  animation: shine-slow 6s ease-in-out infinite;
-}
-
-.bg-radial-gradient {
-  background: radial-gradient(ellipse at center, rgba(255,255,255,0.08) 0%, transparent 70%);
-}
-
 
 html {
-  scroll-behavior: smooth;
+  background: var(--base);
 }
 
-@keyframes modalIn {
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+::selection {
+  background: rgba(29, 111, 208, 0.25);
+}
+
+/* Visible to screen readers and crawlers, not to sighted users. Clipped
+   rather than display:none, which would remove it from the a11y tree. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Windows ─────────────────────────────────────────────── */
+
+.win {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  background: var(--win-fill);
+  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  border: 1px solid var(--win-border);
+  box-shadow: 0 6px 22px rgba(6, 22, 38, 0.22);
+  opacity: 0.94;
+  transition:
+    opacity 120ms ease-out,
+    box-shadow 120ms ease-out,
+    border-color 120ms ease-out;
+}
+
+.win[data-focused] {
+  background: var(--win-fill-focus);
+  border-color: var(--win-border-focus);
+  box-shadow: 0 10px 34px rgba(6, 22, 38, 0.3);
+  opacity: 1;
+}
+
+.win[data-mobile] {
+  animation: sheet-up 180ms ease-out;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+@keyframes sheet-up {
   from {
+    transform: translateY(14px);
     opacity: 0;
-    transform: scale(0.97);
   }
   to {
+    transform: translateY(0);
     opacity: 1;
-    transform: scale(1);
+  }
+}
+
+.win-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--titlebar-h);
+  flex: 0 0 var(--titlebar-h);
+  padding: 0 6px 0 10px;
+  border-bottom: 1px solid var(--win-rule);
+  cursor: default;
+  user-select: none;
+  touch-action: none;
+}
+
+.win:not([data-mobile]) .win-bar {
+  cursor: move;
+}
+
+.win-title {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.win[data-focused] .win-title {
+  color: var(--ink);
+}
+
+.win-buttons {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.win-buttons button {
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  padding: 4px 3px;
+  color: var(--ink-faint);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.win-buttons button:hover {
+  color: var(--accent);
+}
+
+.win-buttons button:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.win-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  outline: none;
+  font-size: 13px;
+  line-height: 1.55;
+  display: flex;
+  flex-direction: column;
+}
+
+.win-grip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  touch-action: none;
+  background: linear-gradient(
+    135deg,
+    transparent 0 46%,
+    var(--ink-faint) 46% 52%,
+    transparent 52% 70%,
+    var(--ink-faint) 70% 76%,
+    transparent 76%
+  );
+}
+
+/* ── Desktop icons ───────────────────────────────────────── */
+
+.icon-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 88px;
+  padding: 8px 4px;
+  background: none;
+  border: 1px solid transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* The wallpaper runs from deep blue to white cloud, so a text shadow alone
+   cannot keep a label legible everywhere. The label carries its own plate. */
+.icon-btn > span:last-child {
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: rgba(8, 26, 44, 0.55);
+  text-shadow: 0 1px 2px rgba(4, 18, 32, 0.9);
+}
+
+.icon-btn:hover,
+.icon-btn:focus-visible {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.4);
+  outline: none;
+}
+
+.icon-glyph {
+  font-size: 26px;
+  line-height: 1.1;
+  text-shadow:
+    0 1px 3px rgba(4, 18, 32, 0.85),
+    0 0 10px rgba(4, 18, 32, 0.6);
+}
+
+/* ── Taskbar ─────────────────────────────────────────────── */
+
+.taskbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--taskbar-h);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  background: var(--win-fill-focus);
+  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  border-top: 1px solid var(--win-border);
+  font-size: 12px;
+}
+
+.taskbar button {
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 8px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-muted);
+  background: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.taskbar button:hover {
+  color: var(--ink);
+  border-color: var(--win-rule);
+}
+
+.taskbar button[data-active] {
+  color: var(--ink);
+  background: rgba(29, 111, 208, 0.12);
+  border-color: rgba(29, 111, 208, 0.35);
+}
+
+.taskbar button:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.clock {
+  margin-left: auto;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  padding-right: 4px;
+}
+
+/* ── Shared view chrome ──────────────────────────────────── */
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 5px 12px;
+  background: none;
+  border: 0;
+  border-left: 2px solid transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.row:hover {
+  background: rgba(29, 111, 208, 0.08);
+}
+
+.row[data-selected] {
+  background: rgba(29, 111, 208, 0.14);
+  border-left-color: var(--accent);
+}
+
+.row:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.row-name {
+  flex: 0 0 auto;
+}
+
+.row-desc {
+  flex: 1 1 auto;
+  color: var(--ink-muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-tag {
+  flex: 0 0 auto;
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+.view-pad {
+  padding: 10px 0;
+  flex: 1 1 auto;
+}
+
+.view-foot {
+  margin-top: auto;
+  padding: 6px 12px;
+  border-top: 1px solid var(--win-rule);
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
   }
 }

@@ -69,8 +69,9 @@ describe("pathOf", () => {
 
 describe("list", () => {
   it("returns the children of a directory", () => {
-    const work = resolve("/work", "/")
-    expect(list(work!).map((n) => n.name)).toContain("vance")
+    const work = resolve("/work", "/")!
+    if (work.kind !== "dir") throw new Error("/work should be a directory")
+    expect(list(work).map((n) => n.name)).toContain("vance")
   })
 })
 
