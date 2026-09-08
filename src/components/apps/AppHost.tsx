@@ -9,6 +9,9 @@ import Minesweeper from "./games/Minesweeper"
 import Snake from "./games/Snake"
 import CubeRunner from "./games/CubeRunner"
 import Pong from "./games/Pong"
+import Solitaire from "./games/Solitaire"
+import DisplayProperties from "./DisplayProperties"
+import ImageView from "./ImageView"
 import type { VNode } from "@/lib/vfs-types"
 
 interface Props {
@@ -24,6 +27,8 @@ export default function AppHost({ node, winId, isMobile, onReboot }: Props) {
       return <FolderView dir={node} winId={winId} isMobile={isMobile} />
     case "file":
       return <TextView file={node} />
+    case "image":
+      return <ImageView node={node} winId={winId} />
     case "app":
       switch (node.app) {
         case "contact":
@@ -42,6 +47,10 @@ export default function AppHost({ node, winId, isMobile, onReboot }: Props) {
           return <CubeRunner winId={winId} isMobile={isMobile} />
         case "pong":
           return <Pong winId={winId} isMobile={isMobile} />
+        case "solitaire":
+          return <Solitaire winId={winId} isMobile={isMobile} />
+        case "display":
+          return <DisplayProperties />
       }
     case "link":
       // Links navigate rather than open; this is unreachable in practice.

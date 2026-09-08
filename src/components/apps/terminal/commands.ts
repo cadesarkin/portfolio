@@ -125,7 +125,13 @@ export const COMMANDS: Record<string, Cmd> = {
         return {
           lines: dim(`${node.name} is an application — try: open ${node.name}`),
         }
-      return { lines: node.body.split("\n").map((text) => ({ text })) }
+      if (node.kind === "image")
+        return {
+          lines: dim(`${node.name}: ${node.caption} — try: open ${node.name}`),
+        }
+      return {
+        lines: node.body.split("\n").map((text: string) => ({ text })),
+      }
     },
   },
 

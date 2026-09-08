@@ -12,9 +12,14 @@ import {
 import { GameFrame } from "./GameFrame"
 import { useTheme } from "@/components/desktop/theme-context"
 
-const W = 9
-const H = 9
-const MINES = 10
+const LEVELS = {
+  beginner: { w: 9, h: 9, mines: 10 },
+  intermediate: { w: 16, h: 16, mines: 40 },
+  expert: { w: 30, h: 16, mines: 99 },
+} as const
+
+type Level = keyof typeof LEVELS
+const LEVEL_KEY = "sarkin.ms.level"
 
 /**
  * Classic Minesweeper number colours.
@@ -30,7 +35,11 @@ const NUM_COLOR: Record<"day" | "night", string[]> = {
 export default function Minesweeper({ isMobile }: { isMobile: boolean }) {
   const { theme } = useTheme()
   const numColor = NUM_COLOR[theme]
-  const [board, setBoard] = useState<Board>(() => createBoard(W, H, MINES))
+  const [level, setLevel] = useState<Level>("beginner")
+  const { w: W, h: H, mines: MINES } = LEVELS[level]
+  const [board, setBoard] = useState<Board>(() =>
+    createBoard(LEVELS.beginner.w, LEVELS.beginner.h, LEVELS.beginner.mines)
+  )
   const [elapsed, setElapsed] = useState(0)
   const longPress = useRef<ReturnType<typeof setTimeout> | null>(null)
   const didLongPress = useRef(false)
@@ -43,9 +52,29 @@ export default function Minesweeper({ isMobile }: { isMobile: boolean }) {
     return () => clearInterval(id)
   }, [playing])
 
-  const restart = () => {
-    setBoard(createBoard(W, H, MINES))
+  // Restore the last level played, then keep it in step with the board.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LEVEL_KEY)
+      if (saved && saved in LEVELS) {
+        const l = saved as Level
+        setLevel(l)
+        setBoard(createBoard(LEVELS[l].w, LEVELS[l].h, LEVELS[l].mines))
+      }
+    } catch {
+      // Storage unavailable; beginner is a fine default.
+    }
+  }, [])
+
+  const restart = (next: Level = level) => {
+    setLevel(next)
+    setBoard(createBoard(LEVELS[next].w, LEVELS[next].h, LEVELS[next].mines))
     setElapsed(0)
+    try {
+      localStorage.setItem(LEVEL_KEY, next)
+    } catch {
+      // Non-fatal.
+    }
   }
 
   const onCell = (i: number) => {
@@ -66,7 +95,7 @@ export default function Minesweeper({ isMobile }: { isMobile: boolean }) {
       status={
         <>
           <span>mines {String(MINES - flagsUsed(board)).padStart(2, "0")}</span>
-          <button type="button" onClick={restart} className="ms-face">
+          <button type="button" onClick={() => restart()} className="ms-face">
             {face}
           </button>
           <span>{String(Math.min(elapsed, 999)).padStart(3, "0")}s</span>
@@ -80,11 +109,33 @@ export default function Minesweeper({ isMobile }: { isMobile: boolean }) {
     >
       <div
         style={{
+          display: "flex",
+          gap: 6,
+          justifyContent: "center",
+          marginBottom: 12,
+        }}
+      >
+        {(Object.keys(LEVELS) as Level[]).map((l) => (
+          <button
+            key={l}
+            type="button"
+            className="seg"
+            data-active={level === l ? "" : undefined}
+            onClick={() => restart(l)}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+      <div
+        style={{
           display: "grid",
           gridTemplateColumns: `repeat(${W}, 1fr)`,
           gap: 1,
-          width: "min(100%, 320px)",
-          aspectRatio: "1",
+          // Sized from the grid so expert (30x16) stays square-celled and
+          // fits the window instead of stretching.
+          width: `min(100%, ${W * 30}px)`,
+          aspectRatio: `${W} / ${H}`,
           margin: "0 auto",
           background: "var(--win-rule)",
           border: "1px solid var(--win-border)",
@@ -119,7 +170,7 @@ export default function Minesweeper({ isMobile }: { isMobile: boolean }) {
               }}
               style={{
                 font: "inherit",
-                fontSize: 13,
+                fontSize: W > 20 ? 11 : 13,
                 fontWeight: 700,
                 lineHeight: 1,
                 display: "flex",

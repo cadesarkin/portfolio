@@ -14,17 +14,26 @@
 import { useEffect, useRef } from "react"
 import { SKY_RAMP, GRASS_RAMP } from "@/lib/bliss-palette"
 import { WALLPAPER, type RGB, type Theme } from "@/lib/theme"
+import {
+  DEFAULT_SETTINGS,
+  type WallpaperSettings,
+} from "./wallpaper-settings"
 
 interface Props {
   /** Halts the render loop — set when a maximized window covers the screen. */
   paused?: boolean
   theme?: Theme
+  settings?: WallpaperSettings
 }
 
 /** Seconds for a full day/night crossfade. */
 const FADE = 0.9
 
-export default function BlissCanvas({ paused = false, theme = "day" }: Props) {
+export default function BlissCanvas({
+  paused = false,
+  theme = "day",
+  settings = DEFAULT_SETTINGS,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pausedRef = useRef(paused)
   pausedRef.current = paused
@@ -34,6 +43,16 @@ export default function BlissCanvas({ paused = false, theme = "day" }: Props) {
   targetRef.current = theme === "night" ? 1 : 0
   /** Repaints the single static frame drawn under reduced motion. */
   const redrawStatic = useRef<((night: number) => void) | null>(null)
+  /**
+   * Live settings, read per frame.
+   *
+   * A ref rather than a dependency: re-running the effect on every slider
+   * tick would tear down and restart the animation mid-drag.
+   */
+  const settingsRef = useRef(settings)
+  settingsRef.current = settings
+  /** Bumped when a setting needs a resize (character size changes the grid). */
+  const relayout = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -188,12 +207,12 @@ export default function BlissCanvas({ paused = false, theme = "day" }: Props) {
         const band = ss(0.16, 0.42, sy) * (1 - ss(0.82, 1.0, sy))
         if (band > 0.001) {
           const c1 = fbm(
-            nx * 1.6 - T * 0.02 * CONFIG.cloudSpeed,
+            nx * 1.6 - T * 0.02 * settingsRef.current.wind,
             y * 2.6 + 1.7,
             4
           )
           const c2 = fbm(
-            nx * 3.4 + T * 0.05 * CONFIG.cloudSpeed + 9.3,
+            nx * 3.4 + T * 0.05 * settingsRef.current.wind + 9.3,
             y * 5.2,
             3
           )
@@ -205,7 +224,12 @@ export default function BlissCanvas({ paused = false, theme = "day" }: Props) {
           // Only the top of each distribution becomes cloud — roughly c1's
           // 80th percentile up, and c2's 88th — which leaves most of the sky
           // as open blue instead of a solid white ceiling.
-          let d = ss(0.338, 0.435, c1) * band + 0.4 * ss(0.318, 0.38, c2) * band
+          // The slider slides the whole threshold window: lower thresholds
+          // mean more of the noise field qualifies as cloud.
+          const shift = (0.5 - settingsRef.current.cloud) * 0.16
+          let d =
+            ss(0.338 + shift, 0.435 + shift, c1) * band +
+            0.4 * ss(0.318 + shift, 0.38 + shift, c2) * band
           if (d > 1) d = 1
 
           if (d > 0.01) {
@@ -236,7 +260,7 @@ export default function BlissCanvas({ paused = false, theme = "day" }: Props) {
         // Lower vertical frequency than the original: at y*16 the ripple read
         // as horizontal corduroy once the glyphs became dark ink.
         const rip = fbm(
-          nx * 8.5 + T * 0.22 * CONFIG.windSpeed,
+          nx * 8.5 + T * 0.22 * settingsRef.current.wind,
           y * 9.0 - T * 0.06,
           2
         )
@@ -338,13 +362,15 @@ export default function BlissCanvas({ paused = false, theme = "day" }: Props) {
       AR = W / H
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
 
-      let fs = CONFIG.fontSize
-      if (W < 600) fs = 9
-      else if (W < 1000) fs = 11
+      // The slider sets the size on desktop; small screens still step down,
+      // since a 12px grid on a phone is both slow and illegible.
+      let fs = settingsRef.current.fontSize
+      if (W < 600) fs = Math.min(fs, 9)
+      else if (W < 1000) fs = Math.min(fs, 11)
 
       // Fewer frames on small screens: the grid is cheaper but the battery
       // budget is tighter.
-      CONFIG.fps = W < 768 ? 20 : 30
+      CONFIG.fps = W < 768 ? Math.min(settingsRef.current.fps, 20) : settingsRef.current.fps
 
       canvas!.width = Math.floor(W * dpr)
       canvas!.height = Math.floor(H * dpr)
@@ -409,6 +435,10 @@ export default function BlissCanvas({ paused = false, theme = "day" }: Props) {
     window.addEventListener("resize", onResize)
 
     applyTheme(nightRef.current)
+    relayout.current = () => {
+      resize()
+      draw()
+    }
     redrawStatic.current = (night: number) => {
       nightRef.current = night
       applyTheme(night)
@@ -428,8 +458,15 @@ export default function BlissCanvas({ paused = false, theme = "day" }: Props) {
       clearTimeout(resizeTimer)
       window.removeEventListener("resize", onResize)
       redrawStatic.current = null
+      relayout.current = null
     }
   }, [])
+
+  // Character size changes the grid dimensions, so it needs a real resize
+  // rather than just the next frame.
+  useEffect(() => {
+    relayout.current?.()
+  }, [settings.fontSize])
 
   // Under reduced motion there is no loop to advance the crossfade, so repaint
   // the single static frame whenever the theme changes.

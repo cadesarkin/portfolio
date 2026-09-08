@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useWindows } from "@/components/desktop/window-manager"
 import { useWindowKeys } from "@/components/desktop/use-window-keys"
-import { glyphFor } from "./glyphs"
+import { NodeIcon } from "./Icon"
 import type { VDir, VNode } from "@/lib/vfs-types"
 
 interface Props {
@@ -55,8 +55,9 @@ export default function FolderView({ dir, winId, isMobile }: Props) {
             }}
             onDoubleClick={() => activate(node)}
           >
+            <NodeIcon node={node} size={18} />
             <span className="row-name">
-              {glyphFor(node)} {node.label ?? node.name}
+              {node.label ?? node.name}
               {node.kind === "dir" ? "/" : ""}
               {node.kind === "link" ? " ↗" : ""}
             </span>

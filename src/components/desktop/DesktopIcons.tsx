@@ -2,7 +2,7 @@
 
 import { useRef } from "react"
 import { root } from "@/lib/vfs"
-import { bigGlyphFor } from "@/components/apps/glyphs"
+import { NodeIcon } from "@/components/apps/Icon"
 import { useWindows } from "./window-manager"
 import type { VNode } from "@/lib/vfs-types"
 
@@ -79,7 +79,7 @@ export default function DesktopIcons({ isMobile, revealed }: Props) {
           }}
         >
           <span className="icon-glyph" aria-hidden="true">
-            {bigGlyphFor(node)}
+            <NodeIcon node={node} size={44} />
           </span>
           <span>{node.label ?? node.name}</span>
         </button>

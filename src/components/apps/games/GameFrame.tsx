@@ -73,7 +73,7 @@ export function GameFrame({
 export function TouchPad({
   buttons,
 }: {
-  buttons: { label: string; onPress: () => void }[]
+  buttons: { label: string; onPress: () => void; onRelease?: () => void }[]
 }) {
   return (
     <div
@@ -94,6 +94,9 @@ export function TouchPad({
             e.preventDefault()
             b.onPress()
           }}
+          onPointerUp={() => b.onRelease?.()}
+          onPointerLeave={() => b.onRelease?.()}
+          onPointerCancel={() => b.onRelease?.()}
           style={{
             font: "inherit",
             fontSize: 16,

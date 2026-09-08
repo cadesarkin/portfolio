@@ -10,10 +10,12 @@ export type AppKey =
   | "terminal"
   | "resume"
   | "contact"
+  | "display"
   | "cube-runner"
   | "minesweeper"
   | "snake"
   | "pong"
+  | "solitaire"
 
 export type IconKey =
   | "folder"
@@ -23,6 +25,8 @@ export type IconKey =
   | "contact"
   | "game"
   | "link"
+  | "image"
+  | "settings"
 
 export interface VBase {
   /** Path segment, e.g. "vance". Unique among its siblings. */
@@ -47,6 +51,14 @@ export interface VFile extends VBase {
   body: string
 }
 
+/** A screenshot. `src` is a path under /public. */
+export interface VImage extends VBase {
+  kind: "image"
+  src: string
+  /** Shown under the image, and used as its alt text. */
+  caption: string
+}
+
 export interface VApp extends VBase {
   kind: "app"
   app: AppKey
@@ -57,9 +69,10 @@ export interface VLink extends VBase {
   url: string
 }
 
-export type VNode = VDir | VFile | VApp | VLink
+export type VNode = VDir | VFile | VApp | VLink | VImage
 
 export const isDir = (n: VNode): n is VDir => n.kind === "dir"
 export const isFile = (n: VNode): n is VFile => n.kind === "file"
 export const isApp = (n: VNode): n is VApp => n.kind === "app"
 export const isLink = (n: VNode): n is VLink => n.kind === "link"
+export const isImage = (n: VNode): n is VImage => n.kind === "image"

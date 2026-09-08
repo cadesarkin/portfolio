@@ -12,10 +12,19 @@ const PADDLE_W = 8 // px
 const BALL = 6 // px
 const WIN_SCORE = 5
 /**
- * Capped so the AI is beatable. Tracking the ball perfectly would make it
- * unloseable, which is not a game.
+ * The AI predicts where the ball will arrive, then aims imperfectly.
+ *
+ * The old version tracked the ball's current y at a capped speed, which
+ * made it purely a function of ball speed: trivial while the rally was slow,
+ * impossible once it was fast, and never wrong in an interesting way.
+ * Predicting the landing point and then missing it on purpose gives it a
+ * difficulty that can actually be tuned.
  */
-const AI_SPEED = 0.62
+const AI_SPEED = 1.15
+/** Fraction of the court the AI can be off by, before ramping. */
+const AI_ERROR = 0.17
+/** Seconds before it reacts to a change of direction. */
+const AI_REACTION = 0.18
 
 interface State {
   ballX: number
@@ -26,6 +35,24 @@ interface State {
   aiY: number
   playerScore: number
   aiScore: number
+  /** Where the AI currently believes the ball will arrive. */
+  aiTarget: number
+  /** Counts down before it re-aims, so it cannot react instantly. */
+  aiDelay: number
+}
+
+/**
+ * Simulates the ball forward to the AI paddle, reflecting off the walls.
+ *
+ * Closed form rather than stepped: fold the straight-line travel into the
+ * range [0, 2) and mirror the second half, which is what a bounce does.
+ */
+function predict(s: State): number {
+  if (s.vx <= 0) return 0.5
+  const dx = 0.955 - s.ballX
+  const y = s.ballY + (s.vy / s.vx) * dx
+  const folded = ((y % 2) + 2) % 2
+  return folded > 1 ? 2 - folded : folded
 }
 
 function serve(toPlayer: boolean): Pick<State, "ballX" | "ballY" | "vx" | "vy"> {
@@ -44,6 +71,8 @@ function initial(): State {
     aiY: 0.5,
     playerScore: 0,
     aiScore: 0,
+    aiTarget: 0.5,
+    aiDelay: 0,
   }
 }
 
@@ -107,9 +136,22 @@ export default function Pong({
       s.vy = -Math.abs(s.vy)
     }
 
-    // AI drifts toward the ball at a capped rate.
-    const aiTarget = s.ballY
-    const delta = aiTarget - s.aiY
+    // Re-aim after the reaction delay, and only while the ball is incoming.
+    s.aiDelay -= dt
+    if (s.vx > 0 && s.aiDelay <= 0) {
+      // Error shrinks as the AI falls behind, so a blowout self-corrects
+      // rather than running away.
+      const behind = Math.max(0, s.playerScore - s.aiScore)
+      const spread = AI_ERROR * Math.max(0.25, 1 - behind * 0.28)
+      s.aiTarget = predict(s) + (Math.random() * 2 - 1) * spread
+      s.aiDelay = AI_REACTION
+    } else if (s.vx < 0 && s.aiDelay <= 0) {
+      // Ball heading away: drift back toward the middle like a real player.
+      s.aiTarget = 0.5
+      s.aiDelay = AI_REACTION * 2
+    }
+
+    const delta = s.aiTarget - s.aiY
     s.aiY += Math.sign(delta) * Math.min(Math.abs(delta), AI_SPEED * dt)
     s.aiY = Math.max(PADDLE_H / 2, Math.min(1 - PADDLE_H / 2, s.aiY))
 
@@ -126,6 +168,7 @@ export default function Pong({
         s.aiScore += 1
         setScores({ player: s.playerScore, ai: s.aiScore })
         Object.assign(s, serve(false))
+        s.aiDelay = AI_REACTION
       }
     }
 
@@ -139,6 +182,7 @@ export default function Pong({
         s.playerScore += 1
         setScores({ player: s.playerScore, ai: s.aiScore })
         Object.assign(s, serve(true))
+        s.aiDelay = AI_REACTION
       }
     }
 

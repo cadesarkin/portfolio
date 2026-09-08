@@ -5,9 +5,11 @@ import BlissCanvas from "./BlissCanvas"
 import BootSequence from "./BootSequence"
 import DesktopIcons from "./DesktopIcons"
 import Taskbar from "./Taskbar"
+import Screensaver from "./Screensaver"
 import Window from "./Window"
 import { WindowProvider, useWindows } from "./window-manager"
 import { ThemeProvider, useTheme } from "./theme-context"
+import { WallpaperProvider, useWallpaper } from "./wallpaper-settings"
 import AppHost from "@/components/apps/AppHost"
 import { resolve } from "@/lib/vfs-utils"
 
@@ -29,6 +31,7 @@ function useIsMobile() {
 function Shell({ booted, onReboot }: { booted: boolean; onReboot: () => void }) {
   const { wins, focused, open, close } = useWindows()
   const { theme } = useTheme()
+  const { settings } = useWallpaper()
   const isMobile = useIsMobile()
 
   // Global shortcuts. Everything else routes through focus-scoped delegation.
@@ -59,7 +62,11 @@ function Shell({ booted, onReboot }: { booted: boolean; onReboot: () => void }) 
 
   return (
     <>
-      <BlissCanvas paused={covered || sheeted} theme={theme} />
+      <BlissCanvas
+        paused={covered || sheeted}
+        theme={theme}
+        settings={settings}
+      />
       <DesktopIcons isMobile={isMobile} revealed={booted} />
       {sheeted && (
         <div
@@ -79,6 +86,7 @@ function Shell({ booted, onReboot }: { booted: boolean; onReboot: () => void }) 
         </Window>
       ))}
       <Taskbar />
+      <Screensaver enabled={booted} />
     </>
   )
 }
@@ -113,10 +121,12 @@ export default function Desktop() {
 
   return (
     <ThemeProvider>
+      <WallpaperProvider>
       <WindowProvider>
         <Shell booted={booting === false} onReboot={reboot} />
         {booting && <BootSequence onDone={finishBoot} />}
       </WindowProvider>
+      </WallpaperProvider>
     </ThemeProvider>
   )
 }

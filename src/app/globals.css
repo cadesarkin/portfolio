@@ -11,8 +11,8 @@
 :root {
   --base: #0d2137;
   --ink: #0d1b26;
-  --ink-muted: rgba(13, 27, 38, 0.55);
-  --ink-faint: rgba(13, 27, 38, 0.32);
+  --ink-muted: rgba(13, 27, 38, 0.72);
+  --ink-faint: rgba(13, 27, 38, 0.48);
   --accent: #1d6fd0;
 
   --win-fill: rgba(250, 252, 255, 0.82);
@@ -21,8 +21,8 @@
   --win-border-focus: rgba(20, 40, 60, 0.55);
   --win-rule: rgba(20, 40, 60, 0.18);
 
-  --taskbar-h: 32px;
-  --titlebar-h: 28px;
+  --taskbar-h: 38px;
+  --titlebar-h: 32px;
 
   --icon-label-bg: rgba(8, 26, 44, 0.55);
   --icon-hover: rgba(255, 255, 255, 0.16);
@@ -33,6 +33,7 @@
   --accent-wash-strong: rgba(29, 111, 208, 0.22);
   --cell-hidden: rgba(176, 197, 216, 0.95);
   --cell-shown: rgba(255, 255, 255, 0.78);
+  --icon-outline: rgba(16, 32, 48, 0.72);
 }
 
 /* ── Night ───────────────────────────────────────────────────
@@ -41,8 +42,8 @@
 [data-theme="night"] {
   --base: #04080f;
   --ink: #dbe9f5;
-  --ink-muted: rgba(219, 233, 245, 0.62);
-  --ink-faint: rgba(219, 233, 245, 0.34);
+  --ink-muted: rgba(219, 233, 245, 0.76);
+  --ink-faint: rgba(219, 233, 245, 0.52);
   --accent: #6ab7ff;
 
   --win-fill: rgba(16, 27, 41, 0.8);
@@ -60,6 +61,7 @@
   --accent-wash-strong: rgba(106, 183, 255, 0.24);
   --cell-hidden: rgba(46, 66, 88, 0.95);
   --cell-shown: rgba(10, 20, 32, 0.7);
+  --icon-outline: rgba(4, 10, 18, 0.85);
 }
 
 html {
@@ -152,7 +154,7 @@ body {
   justify-content: space-between;
   height: var(--titlebar-h);
   flex: 0 0 var(--titlebar-h);
-  padding: 0 6px 0 10px;
+  padding: 0 8px 0 12px;
   border-bottom: 1px solid var(--win-rule);
   cursor: default;
   user-select: none;
@@ -164,7 +166,7 @@ body {
 }
 
 .win-title {
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0.04em;
   color: var(--ink-muted);
   white-space: nowrap;
@@ -184,9 +186,9 @@ body {
 
 .win-buttons button {
   font: inherit;
-  font-size: 11px;
+  font-size: 12.5px;
   line-height: 1;
-  padding: 4px 3px;
+  padding: 5px 4px;
   color: var(--ink-faint);
   background: none;
   border: 0;
@@ -207,8 +209,8 @@ body {
   min-height: 0;
   overflow: auto;
   outline: none;
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.6;
   display: flex;
   flex-direction: column;
 }
@@ -237,21 +239,21 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
-  width: 88px;
-  padding: 8px 4px;
+  gap: 7px;
+  width: 108px;
+  padding: 10px 4px;
   background: none;
   border: 1px solid transparent;
   color: #fff;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
 }
 
 /* The wallpaper runs from deep blue to white cloud, so a text shadow alone
    cannot keep a label legible everywhere. The label carries its own plate. */
 .icon-btn > span:last-child {
-  padding: 1px 5px;
+  padding: 2px 7px;
   border-radius: 2px;
   background: var(--icon-label-bg);
   text-shadow: 0 1px 2px rgba(4, 18, 32, 0.9);
@@ -265,8 +267,7 @@ body {
 }
 
 .icon-glyph {
-  font-size: 26px;
-  line-height: 1.1;
+  line-height: 0;
   text-shadow:
     0 1px 3px rgba(4, 18, 32, 0.85),
     0 0 10px rgba(4, 18, 32, 0.6);
@@ -275,6 +276,7 @@ body {
 /* ── Taskbar ─────────────────────────────────────────────── */
 
 .taskbar {
+  font-size: 13px;
   position: fixed;
   left: 0;
   right: 0;
@@ -294,8 +296,8 @@ body {
 
 .taskbar button {
   font: inherit;
-  font-size: 12px;
-  padding: 3px 8px;
+  font-size: 13px;
+  padding: 5px 10px;
   max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -337,14 +339,14 @@ body {
 .row {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 11px;
   width: 100%;
-  padding: 5px 12px;
+  padding: 8px 14px;
   background: none;
   border: 0;
   border-left: 2px solid transparent;
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink);
   text-align: left;
   cursor: pointer;
@@ -371,7 +373,7 @@ body {
 .row-desc {
   flex: 1 1 auto;
   color: var(--ink-muted);
-  font-size: 12px;
+  font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -380,7 +382,7 @@ body {
 .row-tag {
   flex: 0 0 auto;
   color: var(--ink-faint);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .view-pad {
@@ -390,10 +392,10 @@ body {
 
 .view-foot {
   margin-top: auto;
-  padding: 6px 12px;
+  padding: 8px 14px;
   border-top: 1px solid var(--win-rule);
   color: var(--ink-faint);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 a {
@@ -488,4 +490,36 @@ a:hover {
     line-height: 1.4;
     margin-top: 2px;
   }
+}
+
+/* Segmented / secondary buttons: difficulty pickers, panel actions. */
+.seg {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 5px 12px;
+  color: var(--ink-muted);
+  background: var(--cell-shown);
+  border: 1px solid var(--win-border);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.seg:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+
+.seg[data-active] {
+  color: var(--ink);
+  background: var(--accent-wash);
+  border-color: var(--accent);
+}
+
+.seg:disabled {
+  cursor: default;
+}
+
+.seg:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
 }

@@ -56,23 +56,26 @@ export const initialWindowState: WindowState = {
 
 /** Default window size per app. Folders and files share the generic size. */
 const SIZES: Partial<Record<AppKey, { w: number; h: number }>> = {
-  terminal: { w: 720, h: 440 },
-  resume: { w: 780, h: 620 },
-  contact: { w: 480, h: 300 },
-  "cube-runner": { w: 640, h: 520 },
-  minesweeper: { w: 420, h: 460 },
-  snake: { w: 560, h: 500 },
-  pong: { w: 640, h: 440 },
+  terminal: { w: 820, h: 500 },
+  resume: { w: 860, h: 680 },
+  contact: { w: 560, h: 330 },
+  display: { w: 520, h: 440 },
+  "cube-runner": { w: 840, h: 600 },
+  minesweeper: { w: 480, h: 560 },
+  snake: { w: 660, h: 560 },
+  pong: { w: 760, h: 500 },
+  solitaire: { w: 900, h: 640 },
 }
 
-const DEFAULT_SIZE = { w: 640, h: 420 }
+const DEFAULT_SIZE = { w: 720, h: 480 }
 const CASCADE_STEP = 28
 const CASCADE_WRAP = 8
 const ORIGIN = { x: 132, y: 64 }
 
 function sizeFor(node: VNode) {
   if (node.kind === "app") return SIZES[node.app] ?? DEFAULT_SIZE
-  if (node.kind === "file") return { w: 660, h: 480 }
+  if (node.kind === "file") return { w: 720, h: 540 }
+  if (node.kind === "image") return { w: 880, h: 620 }
   return DEFAULT_SIZE
 }
 
