@@ -46,17 +46,34 @@ export function useWindows(): WindowApi {
 export function WindowProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(windowReducer, initialWindowState)
 
-  const handlers = useRef(new Map<string, KeyHandler>())
+  /**
+   * Key handlers per window, as a set rather than a single entry.
+   *
+   * A window commonly has more than one subscriber: `Window` itself registers
+   * Escape-to-close, and the app inside it registers its own keys under the
+   * same id. Storing one handler per id meant the later registration silently
+   * replaced the earlier one — and since effects run child-before-parent, the
+   * window's Escape handler always won, leaving games and folder navigation
+   * with no keyboard at all.
+   */
+  const handlers = useRef(new Map<string, Set<KeyHandler>>())
   // Read by the document listener, which is installed once and must not be
   // torn down and rebuilt every time focus changes.
   const focusedRef = useRef<string | null>(null)
   focusedRef.current = state.focused
 
   const registerKeys = useCallback((id: string, handler: KeyHandler) => {
-    handlers.current.set(id, handler)
+    let set = handlers.current.get(id)
+    if (!set) {
+      set = new Set()
+      handlers.current.set(id, set)
+    }
+    set.add(handler)
     return () => {
-      // Only remove our own entry: a remount may already have replaced it.
-      if (handlers.current.get(id) === handler) handlers.current.delete(id)
+      const current = handlers.current.get(id)
+      if (!current) return
+      current.delete(handler)
+      if (current.size === 0) handlers.current.delete(id)
     }
   }, [])
 
@@ -82,7 +99,9 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      handlers.current.get(id)?.(e)
+      // Copied before iterating: a handler may unsubscribe during dispatch.
+      const subs = handlers.current.get(id)
+      if (subs) for (const handler of [...subs]) handler(e)
     }
     document.addEventListener("keydown", onKeyDown)
     return () => document.removeEventListener("keydown", onKeyDown)

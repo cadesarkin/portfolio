@@ -31,7 +31,8 @@ export default function Window({ win, isMobile, children }: Props) {
   )
 
   useWindowKeys(win.id, (e) => {
-    if (e.key === "Escape") {
+    // The app inside gets first refusal: if it handled Escape, leave it alone.
+    if (e.key === "Escape" && !e.defaultPrevented) {
       e.preventDefault()
       close(win.id)
     }

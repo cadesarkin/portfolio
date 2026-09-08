@@ -5,6 +5,10 @@ import TextView from "./TextView"
 import ContactView from "./ContactView"
 import ResumeView from "./ResumeView"
 import Terminal from "./Terminal"
+import Minesweeper from "./games/Minesweeper"
+import Snake from "./games/Snake"
+import CubeRunner from "./games/CubeRunner"
+import Pong from "./games/Pong"
 import type { VNode } from "@/lib/vfs-types"
 
 interface Props {
@@ -12,31 +16,6 @@ interface Props {
   winId: string
   isMobile: boolean
   onReboot: () => void
-}
-
-/** Shown for apps that later phases implement, so no folder is a dead end. */
-function PlaceholderView({ node }: { node: VNode }) {
-  return (
-    <div style={{ padding: "18px 20px", maxWidth: "60ch" }}>
-      <div style={{ fontSize: 13, marginBottom: 6 }}>{node.label ?? node.name}</div>
-      {node.desc && (
-        <div style={{ color: "var(--ink-muted)", fontSize: 12.5 }}>
-          {node.desc}
-        </div>
-      )}
-      <div
-        style={{
-          marginTop: 14,
-          padding: "8px 10px",
-          border: "1px dashed var(--win-rule)",
-          color: "var(--ink-faint)",
-          fontSize: 12,
-        }}
-      >
-        not yet installed — arriving in a later build
-      </div>
-    </div>
-  )
 }
 
 export default function AppHost({ node, winId, isMobile, onReboot }: Props) {
@@ -55,8 +34,14 @@ export default function AppHost({ node, winId, isMobile, onReboot }: Props) {
           return (
             <Terminal winId={winId} isMobile={isMobile} onReboot={onReboot} />
           )
-        default:
-          return <PlaceholderView node={node} />
+        case "minesweeper":
+          return <Minesweeper isMobile={isMobile} />
+        case "snake":
+          return <Snake winId={winId} isMobile={isMobile} />
+        case "cube-runner":
+          return <CubeRunner winId={winId} isMobile={isMobile} />
+        case "pong":
+          return <Pong winId={winId} isMobile={isMobile} />
       }
     case "link":
       // Links navigate rather than open; this is unreachable in practice.
