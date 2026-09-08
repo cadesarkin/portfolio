@@ -166,6 +166,49 @@ function Link() {
   )
 }
 
+function Paint() {
+  return (
+    <>
+      <rect x="1" y="2" width="14" height="11" fill="#fbfdff" />
+      <rect x="2.5" y="3.5" width="5" height="4" fill="#e05c4a" />
+      <rect x="8" y="3.5" width="5" height="4" fill="#3f8fd0" />
+      <rect x="2.5" y="8.2" width="5" height="3.4" fill="#f0c268" />
+      <rect x="8" y="8.2" width="5" height="3.4" fill="#5ea36a" />
+      <rect
+        x="1"
+        y="2"
+        width="14"
+        height="11"
+        fill="none"
+        stroke={OUTLINE}
+        strokeWidth="1"
+      />
+    </>
+  )
+}
+
+function Music() {
+  return (
+    <>
+      <rect x="1" y="2" width="14" height="12" fill="#2b2f52" />
+      <rect x="2.5" y="3.5" width="11" height="4" fill="#8fd0f5" />
+      <rect x="3.5" y="9" width="1.6" height="3.4" fill="#6ee08a" />
+      <rect x="6" y="10.4" width="1.6" height="2" fill="#6ee08a" />
+      <rect x="8.5" y="8.2" width="1.6" height="4.2" fill="#6ee08a" />
+      <rect x="11" y="9.8" width="1.6" height="2.6" fill="#6ee08a" />
+      <rect
+        x="1"
+        y="2"
+        width="14"
+        height="12"
+        fill="none"
+        stroke={OUTLINE}
+        strokeWidth="1"
+      />
+    </>
+  )
+}
+
 const SHAPES: Record<IconKey, () => React.JSX.Element> = {
   folder: Folder,
   file: Doc,
@@ -176,6 +219,8 @@ const SHAPES: Record<IconKey, () => React.JSX.Element> = {
   link: Link,
   image: Image,
   settings: Settings,
+  paint: Paint,
+  music: Music,
 }
 
 export function Icon({ name, size = 16 }: { name: IconKey; size?: number }) {

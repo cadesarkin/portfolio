@@ -65,6 +65,8 @@ const SIZES: Partial<Record<AppKey, { w: number; h: number }>> = {
   snake: { w: 660, h: 560 },
   pong: { w: 760, h: 500 },
   solitaire: { w: 900, h: 640 },
+  paint: { w: 700, h: 640 },
+  music: { w: 520, h: 420 },
 }
 
 const DEFAULT_SIZE = { w: 720, h: 480 }

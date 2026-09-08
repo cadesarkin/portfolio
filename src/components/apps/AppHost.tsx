@@ -12,6 +12,8 @@ import Pong from "./games/Pong"
 import Solitaire from "./games/Solitaire"
 import DisplayProperties from "./DisplayProperties"
 import ImageView from "./ImageView"
+import AsciiPaint from "./AsciiPaint"
+import Chiptune from "./Chiptune"
 import type { VNode } from "@/lib/vfs-types"
 
 interface Props {
@@ -51,6 +53,10 @@ export default function AppHost({ node, winId, isMobile, onReboot }: Props) {
           return <Solitaire winId={winId} isMobile={isMobile} />
         case "display":
           return <DisplayProperties />
+        case "paint":
+          return <AsciiPaint winId={winId} isMobile={isMobile} />
+        case "music":
+          return <Chiptune winId={winId} isMobile={isMobile} />
       }
     case "link":
       // Links navigate rather than open; this is unreachable in practice.

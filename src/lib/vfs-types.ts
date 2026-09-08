@@ -16,6 +16,8 @@ export type AppKey =
   | "snake"
   | "pong"
   | "solitaire"
+  | "paint"
+  | "music"
 
 export type IconKey =
   | "folder"
@@ -27,6 +29,8 @@ export type IconKey =
   | "link"
   | "image"
   | "settings"
+  | "paint"
+  | "music"
 
 export interface VBase {
   /** Path segment, e.g. "vance". Unique among its siblings. */

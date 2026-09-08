@@ -53,6 +53,13 @@ export default function DesktopIcons({ isMobile, revealed }: Props) {
         flexDirection: isMobile ? undefined : "column",
         gap: isMobile ? 8 : 2,
         right: isMobile ? 12 : undefined,
+        // Flow into a second column once the first runs out of height, the way
+        // a real desktop does, rather than running off under the taskbar.
+        flexWrap: isMobile ? undefined : "wrap",
+        alignContent: isMobile ? undefined : "flex-start",
+        maxHeight: isMobile
+          ? undefined
+          : "calc(100vh - var(--taskbar-h) - 32px)",
       }}
     >
       {items.map((node, i) => (

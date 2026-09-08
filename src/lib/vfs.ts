@@ -248,15 +248,8 @@ export const root: VDir = {
                 "dashboard. Then drag, drop and resize the pieces until it is right.",
                 "No code required at any step.",
                 "",
-                "Open source for local hosting, with a hosted version at zaiq.app.",
+                "Open source, for local hosting. A hosted version is in the works.",
               ].join("\n"),
-            },
-            {
-              kind: "link",
-              name: "zaiq.app",
-              icon: "link",
-              desc: "hosted",
-              url: "https://zaiq.app",
             },
             {
               kind: "link",
@@ -426,6 +419,20 @@ export const root: VDir = {
       app: "terminal",
       icon: "terminal",
       desc: "a real shell over this filesystem",
+    },
+    {
+      kind: "app",
+      name: "paint",
+      app: "paint",
+      icon: "paint",
+      desc: "draw on a character grid",
+    },
+    {
+      kind: "app",
+      name: "music",
+      app: "music",
+      icon: "music",
+      desc: "three chiptunes, synthesised live",
     },
     {
       kind: "app",
