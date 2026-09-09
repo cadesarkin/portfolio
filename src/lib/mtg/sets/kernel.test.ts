@@ -8,8 +8,8 @@ import { resolveAll, stateBasedActions, checkTriggers } from "../stack"
 import { powerOf, hasKeyword } from "../continuous"
 import { advanceTo } from "../turn"
 import { declareAttackers } from "../combat"
-import { keywordName, typeName, colourName } from "../flavour"
-import type { GameCard, GameState } from "../types"
+import { keywordGlossary, keywordName, typeName, colourName } from "../flavour"
+import { KEYWORDS, type GameCard, type GameState } from "../types"
 
 const DECK_SIZE = 40
 
@@ -340,5 +340,44 @@ describe("creatures that draw cards", () => {
     expect(castSpell(g, poll.id)).toBe(true)
     resolveAll(g)
     expect(g.players[0].library.length).toBe(before - 2)
+  })
+})
+
+/* ── The keyword reference ────────────────────────────────────────────── */
+
+describe("the keyword glossary", () => {
+  it("explains every keyword the engine has", () => {
+    const glossary = keywordGlossary("kernel")
+    expect(glossary).toHaveLength(KEYWORDS.length)
+    for (const entry of glossary) {
+      expect(entry.help, entry.engine).toBeTruthy()
+      expect(entry.name, entry.engine).toBeTruthy()
+    }
+  })
+
+  /* A reference listing words that appear on no card is a reference that
+     teaches you something you will never use. */
+  it("names only keywords that appear somewhere in the set", () => {
+    const inSet = new Set<string>()
+    for (const card of Object.values(KERNEL_CARDS)) {
+      for (const k of card.keywords) inSet.add(k)
+      for (const a of card.abilities) {
+        if (a.kind === "static" && "keyword" in a.effect) inSet.add(a.effect.keyword)
+        const effects = "effects" in a ? a.effects : []
+        for (const e of effects) {
+          if (e.do === "grant") inSet.add(e.keyword)
+          if (e.do === "token") for (const k of e.token.keywords) inSet.add(k)
+        }
+      }
+    }
+    const missing = KEYWORDS.filter((k) => !inSet.has(k))
+    expect(missing.join(", "), "keywords no card in the set uses").toBe("")
+  })
+
+  it("gives the themed name and the engine name both", () => {
+    const overflow = keywordGlossary("kernel").find((k) => k.engine === "trample")!
+    expect(overflow.name).toBe("overflow")
+    const plain = keywordGlossary("mtg").find((k) => k.engine === "trample")!
+    expect(plain.name).toBe("trample")
   })
 })

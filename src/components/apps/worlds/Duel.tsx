@@ -37,7 +37,13 @@ import {
   type Waiting,
 } from "@/lib/mtg/duel"
 import { KERNEL_DECKS, KERNEL_DECK_IDS } from "@/lib/mtg/sets/kernel"
-import { keywordName, lifeName, typeLine, type Flavour } from "@/lib/mtg/flavour"
+import {
+  keywordGlossary,
+  keywordName,
+  lifeName,
+  typeLine,
+  type Flavour,
+} from "@/lib/mtg/flavour"
 import type { GameCard, GameState, Pool } from "@/lib/mtg/types"
 
 const flavourOf = (deckId: string): Flavour =>
@@ -72,7 +78,7 @@ export default function Duel({ winId }: { winId: string }) {
   /** The permanent under the cursor, which the keyboard acts on. */
   const [hovered, setHovered] = useState<number | null>(null)
   /** Which zone is open in the side panel. */
-  const [openZone, setOpenZone] = useState<"graveyard" | "exile" | "log">("log")
+  const [openZone, setOpenZone] = useState<"graveyard" | "exile" | "log" | "keywords">("log")
   /** An X spell waiting for a value, and the value being chosen. */
   const [choosingX, setChoosingX] = useState<{ card: number; value: number } | null>(null)
   const [inspect, setInspect] = useState<GameCard | null>(null)
@@ -555,7 +561,7 @@ export default function Duel({ winId }: { winId: string }) {
             borderBottom: "1px solid rgba(160,140,220,0.2)",
           }}
         >
-          {(["log", "graveyard", "exile"] as const).map((z) => (
+          {(["log", "graveyard", "exile", "keywords"] as const).map((z) => (
             <button
               key={z}
               type="button"
@@ -570,7 +576,9 @@ export default function Duel({ winId }: { winId: string }) {
         </div>
 
         <div style={{ flex: "1 1 auto", overflowY: "auto", padding: "8px 10px", fontSize: 11 }}>
-          {openZone === "log" ? (
+          {openZone === "keywords" ? (
+            <Keywords flavour={flavour} />
+          ) : openZone === "log" ? (
             state.log.slice(-70).map((entry, i) => (
               <div
                 key={i}
@@ -641,6 +649,28 @@ function DeckPicker({ onPick }: { onPick: (id: string) => void }) {
           <div style={{ fontSize: 10.5, color: "#6f6688", marginTop: 6 }}>
             {KERNEL_DECKS.map((d) => `${d.name}: ${d.blurb}`).join(" · ")}
           </div>
+
+          <details style={{ marginTop: 12 }}>
+            <summary style={{ fontSize: 11, color: "#cbb8f0", cursor: "pointer" }}>
+              what the keywords mean
+            </summary>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))",
+                gap: "6px 16px",
+                marginTop: 8,
+              }}
+            >
+              {keywordGlossary("kernel").map((k) => (
+                <div key={k.engine}>
+                  <span style={{ color: "#e4e0ee", fontSize: 11 }}>{k.name}</span>{" "}
+                  <span style={{ color: "#5d5578", fontSize: 9.5 }}>{k.engine}</span>
+                  <div style={{ color: "#9c92b8", fontSize: 10, lineHeight: 1.4 }}>{k.help}</div>
+                </div>
+              ))}
+            </div>
+          </details>
         </section>
 
         <section>
@@ -991,6 +1021,31 @@ function HandCard({
       </div>
       {mark && <div style={{ fontSize: 8, color: mark.colour, marginTop: 1 }}>{mark.label}</div>}
     </button>
+  )
+}
+
+/**
+ * What every keyword does.
+ *
+ * The set renames them — trample is "overflow", haste is "preempt" — so
+ * without this the words on a card are guesswork. The engine name is shown
+ * alongside, since anyone who knows Magic already knows what the card means.
+ */
+function Keywords({ flavour }: { flavour: Flavour }) {
+  return (
+    <div>
+      {keywordGlossary(flavour).map((k) => (
+        <div key={k.engine} style={{ marginBottom: 7 }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "baseline" }}>
+            <strong style={{ color: "#cbb8f0", fontSize: 11 }}>{k.name}</strong>
+            {flavour === "kernel" && (
+              <span style={{ color: "#5d5578", fontSize: 9.5 }}>{k.engine}</span>
+            )}
+          </div>
+          <div style={{ color: "#9c92b8", fontSize: 10, lineHeight: 1.4 }}>{k.help}</div>
+        </div>
+      ))}
+    </div>
   )
 }
 
