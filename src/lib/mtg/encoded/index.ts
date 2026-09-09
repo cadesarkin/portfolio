@@ -472,6 +472,182 @@ export const ENCODED: Record<string, EncodedCard> = {
       { kind: "spell", effects: [{ do: "unimplemented", note: "does not untap during your untap step" }] },
     ],
   },
+
+  "Talisman of Conviction": {
+    // Two mana abilities on the card; the engine offers one, which still makes
+    // exactly one mana, so the card is worth what it should be.
+    abilities: [
+      { kind: "mana", cost: { tap: true }, produces: ["C", "R", "W"] },
+      { kind: "spell", effects: [{ do: "unimplemented", note: "coloured mana costs you 1 life" }] },
+    ],
+  },
+
+  /* ── Anthems and payoffs ────────────────────────────────────────────── */
+
+  "Cathars' Crusade": {
+    abilities: [
+      {
+        kind: "triggered",
+        on: { when: "enters", who: "other", filter: { types: ["Creature"], controller: "you" } },
+        effects: [
+          {
+            do: "counters",
+            counter: "+1/+1",
+            amount: 1,
+            target: { what: "creature", controller: "you", count: "all" },
+          },
+        ],
+      },
+    ],
+  },
+
+  "Shamanic Revelation": {
+    abilities: [
+      {
+        kind: "spell",
+        effects: [
+          {
+            do: "draw",
+            amount: { count: "creatures", filter: { controller: "you" } },
+            who: "you",
+          },
+          { do: "unimplemented", note: "gain 4 life per creature with power 4 or greater" },
+        ],
+      },
+    ],
+  },
+
+  "Sram's Expertise": {
+    abilities: [
+      {
+        kind: "spell",
+        effects: [
+          {
+            do: "token",
+            count: 3,
+            token: {
+              name: "Servo",
+              power: 1,
+              toughness: 1,
+              types: ["Creature"],
+              subtypes: ["Servo"],
+              colours: [],
+              keywords: [],
+            },
+          },
+          { do: "unimplemented", note: "and cast a spell of mana value 3 or less for free" },
+        ],
+      },
+    ],
+  },
+
+  /* ── Protection tricks ──────────────────────────────────────────────── */
+
+  "Flawless Maneuver": {
+    abilities: [
+      {
+        kind: "spell",
+        effects: [
+          {
+            do: "grant",
+            keyword: "indestructible",
+            target: { what: "creature", controller: "you", count: "all" },
+            until: "eot",
+          },
+          { do: "unimplemented", note: "free if you control a commander" },
+        ],
+      },
+    ],
+  },
+
+  "Akroma's Will": {
+    abilities: [
+      {
+        kind: "spell",
+        effects: [
+          {
+            do: "grant",
+            keyword: "flying",
+            target: { what: "creature", controller: "you", count: "all" },
+            until: "eot",
+          },
+          {
+            do: "grant",
+            keyword: "vigilance",
+            target: { what: "creature", controller: "you", count: "all" },
+            until: "eot",
+          },
+          {
+            do: "grant",
+            keyword: "double strike",
+            target: { what: "creature", controller: "you", count: "all" },
+            until: "eot",
+          },
+          { do: "unimplemented", note: "the second mode, and the choice between them" },
+        ],
+      },
+    ],
+  },
+
+  /* ── Graveyard and library ──────────────────────────────────────────── */
+
+  "Animate Dead": {
+    abilities: [
+      {
+        kind: "triggered",
+        on: { when: "enters", who: "self" },
+        effects: [{ do: "reanimate", who: "each" }],
+      },
+    ],
+  },
+
+  Gamble: {
+    abilities: [
+      {
+        kind: "spell",
+        effects: [
+          { do: "tutor", filter: {}, to: "hand" },
+          { do: "unimplemented", note: "then discard a card at random" },
+        ],
+      },
+    ],
+  },
+
+  "Green Sun's Zenith": {
+    abilities: [
+      {
+        kind: "spell",
+        effects: [
+          { do: "tutor", filter: { types: ["Creature"], colours: ["G"] }, to: "battlefield" },
+          { do: "unimplemented", note: "limited by X, and shuffled back in" },
+        ],
+      },
+    ],
+  },
+
+  "Finale of Devastation": {
+    abilities: [
+      {
+        kind: "spell",
+        effects: [
+          { do: "tutor", filter: { types: ["Creature"] }, to: "battlefield" },
+          { do: "unimplemented", note: "limited by X" },
+        ],
+      },
+    ],
+  },
+
+  "Force of Vigor": {
+    abilities: [
+      {
+        kind: "spell",
+        effects: [
+          { do: "destroy", target: { what: "artifact", controller: "opponent", count: 2 } },
+          { do: "destroy", target: { what: "enchantment", controller: "opponent", count: 2 } },
+        ],
+      },
+    ],
+  },
 }
 
 export function encodedFor(name: string): EncodedCard | undefined {

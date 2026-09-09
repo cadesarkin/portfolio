@@ -3,6 +3,7 @@ import { writeFileSync } from "node:fs"
 import raw from "../mtg-data.json"
 import { autoEncode } from "./encoded/auto"
 import { cardDef, allDefs } from "./cards"
+import { encodedFor } from "./encoded"
 
 /**
  * Not an assertion — a report of what the parser cannot read yet, ranked by how
@@ -21,6 +22,9 @@ it("reports the most common unparsed lines", () => {
   for (const c of cards) {
     const def = cardDef(c.name)
     if (!def) continue
+    // A hand-written entry replaces the parser for that card, so its text is
+    // not "unparsed" — counting it here would ask for work already done.
+    if (encodedFor(c.name)) continue
     const permanent = def.types.some((t) =>
       ["Creature", "Artifact", "Enchantment", "Land", "Planeswalker"].includes(t)
     )

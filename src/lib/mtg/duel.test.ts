@@ -253,11 +253,11 @@ describe("card coverage", () => {
   it("does not lose ground on how much text runs", () => {
     const counts = { full: 0, partial: 0, body: 0, vanilla: 0 }
     for (const d of allDefs()) counts[d.encoded]++
-    expect(counts.full, "cards whose text runs in full").toBeGreaterThanOrEqual(24)
+    expect(counts.full, "cards whose text runs in full").toBeGreaterThanOrEqual(42)
     expect(
       counts.full + counts.partial,
       "cards with any encoded behaviour at all"
-    ).toBeGreaterThanOrEqual(70)
+    ).toBeGreaterThanOrEqual(100)
   })
 
   /** Every land in the pool has to make mana or the decks cannot function. */

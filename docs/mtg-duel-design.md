@@ -61,10 +61,11 @@ src/lib/mtg/
   stack.ts       casting, the stack, resolution
   combat.ts      attackers, blockers, damage, evasion
   effects.ts     the effect vocabulary and how each resolves
-  continuous.ts  static buffs and granted keywords
-  sba.ts         state-based actions
-  encoded/       card name -> abilities
+  continuous.ts  static buffs, granted keywords, what a permanent really is
+  actions.ts     playing a land, tapping for mana, casting
+  encoded/       card behaviour: hand-written entries, and a text parser
   ai.ts          the opponent
+  duel.ts        the driver that runs a game and stops for the player
 ```
 
 Pure logic throughout, as the rest of this project does it: the engine never
@@ -89,18 +90,19 @@ Measured by the tests, written out to `playability-report.txt` and
 `coverage-report.txt` on every run:
 
 ```
-bears    100 cards: 34/34 lands make mana, 29 creatures have bodies, 19/37 other spells do something
-jetmir   100 cards: 34/35 lands make mana, 26 creatures have bodies, 18/39 other spells do something
-kaalia   100 cards: 36/36 lands make mana, 25 creatures have bodies, 20/39 other spells do something
+bears    100 cards: 34/34 lands make mana, 29 creatures have bodies, 22/37 other spells do something
+jetmir   100 cards: 34/35 lands make mana, 26 creatures have bodies, 24/39 other spells do something
+kaalia   100 cards: 36/36 lands make mana, 25 creatures have bodies, 22/39 other spells do something
 
-text coverage over the pool: 40 full, 53 partial, 134 body only
+text coverage over the pool: 43 full, 60 partial, 124 body only
 ```
 
 So: the mana bases work completely, every creature is a real body that attacks
-and blocks with its printed keywords, and about half the other spells still
-resolve doing nothing. That last number is the honest weak spot and the one to
-keep pushing on. `coverage-report.txt` ranks the unparsed sentences by how often
-they occur, which is how the next batch gets picked.
+and blocks with its printed keywords, and about six spells in ten do something
+when they resolve. The remaining four in ten are the honest weak spot and the
+number to keep pushing on. `coverage-report.txt` ranks the unparsed sentences by
+how often they occur, which is how the next batch gets picked — by evidence
+rather than by guesswork.
 
 ## Hard-won details
 
