@@ -20,6 +20,7 @@ import {
   type Target,
 } from "./engine/solitaire"
 import { GameFrame } from "./GameFrame"
+import { useHighScoreEntry } from "./useHighScoreEntry"
 
 const PIP: Record<Suit, string> = { S: "♠", H: "♥", D: "♦", C: "♣" }
 const CARD_W = 58
@@ -128,11 +129,17 @@ export default function Solitaire({
   const [game, setGame] = useState<Game>(() => createGame())
   const [sel, setSel] = useState<Source | null>(null)
   const [elapsed, setElapsed] = useState(0)
+  const entry = useHighScoreEntry("solitaire")
 
   useEffect(() => {
     if (game.won) return
     const id = setInterval(() => setElapsed((t) => t + 1), 1000)
     return () => clearInterval(id)
+  }, [game.won])
+
+  useEffect(() => {
+    if (game.won) entry.offer(game.moves)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.won])
 
   const restart = () => {
@@ -207,6 +214,7 @@ export default function Solitaire({
           : "click a card then its destination · double-click to auto-place · space draws · a autoplays · r restarts"
       }
     >
+      {entry.prompt}
       <div style={{ overflow: "auto", padding: 4 }}>
         {/* Stock, waste, foundations */}
         <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>

@@ -6,6 +6,7 @@ import { useTheme } from "@/components/desktop/theme-context"
 import { GAME_COLORS } from "@/lib/theme"
 import { useCanvasSize, useGameLoop, useHighScore } from "./useGameShell"
 import { GameFrame, TouchPad } from "./GameFrame"
+import { useHighScoreEntry } from "./useHighScoreEntry"
 
 /** Half-width of the playable strip, in world units either side of centre. */
 const TRACK = 7.2
@@ -100,6 +101,7 @@ export default function CubeRunner({
   const [dead, setDead] = useState(false)
   const [started, setStarted] = useState(false)
   const { best, submit } = useHighScore("cube-runner")
+  const entry = useHighScoreEntry("cube-runner")
 
   const restart = useCallback(() => {
     state.current = initial()
@@ -181,6 +183,7 @@ export default function CubeRunner({
         s.dead = true
         setDead(true)
         submit(Math.floor(s.distance))
+        entry.offer(Math.floor(s.distance))
         break
       }
     }
@@ -362,6 +365,7 @@ export default function CubeRunner({
           aria-label="Cube Runner"
           style={{ display: "block", border: "1px solid var(--win-rule)" }}
         />
+        {entry.prompt}
       </div>
     </GameFrame>
   )

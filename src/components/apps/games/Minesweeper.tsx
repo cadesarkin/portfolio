@@ -11,6 +11,7 @@ import {
 } from "./engine/minesweeper"
 import { GameFrame } from "./GameFrame"
 import { useTheme } from "@/components/desktop/theme-context"
+import { useHighScoreEntry } from "./useHighScoreEntry"
 
 const LEVELS = {
   beginner: { w: 9, h: 9, mines: 10 },
@@ -36,6 +37,7 @@ export default function Minesweeper({ isMobile }: { isMobile: boolean }) {
   const { theme } = useTheme()
   const numColor = NUM_COLOR[theme]
   const [level, setLevel] = useState<Level>("beginner")
+  const entry = useHighScoreEntry(`minesweeper-${level}`)
   const { w: W, h: H, mines: MINES } = LEVELS[level]
   const [board, setBoard] = useState<Board>(() =>
     createBoard(LEVELS.beginner.w, LEVELS.beginner.h, LEVELS.beginner.mines)
@@ -51,6 +53,14 @@ export default function Minesweeper({ isMobile }: { isMobile: boolean }) {
     const id = setInterval(() => setElapsed((t) => t + 1), 1000)
     return () => clearInterval(id)
   }, [playing])
+
+  // Only a cleared board counts; a loss has no meaningful time.
+  useEffect(() => {
+    if (board.status === "won") entry.offer(elapsed)
+    // `elapsed` is deliberately not a dependency: the offer should fire once,
+    // on the transition to won, not on every tick before it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [board.status])
 
   // Restore the last level played, then keep it in step with the board.
   useEffect(() => {
@@ -107,6 +117,7 @@ export default function Minesweeper({ isMobile }: { isMobile: boolean }) {
           : "click to reveal · right-click to flag · click a number to chord"
       }
     >
+      {entry.prompt}
       <div
         style={{
           display: "flex",

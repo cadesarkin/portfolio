@@ -18,6 +18,7 @@ export type AppKey =
   | "solitaire"
   | "paint"
   | "music"
+  | "leaderboard"
 
 export type IconKey =
   | "folder"
@@ -31,6 +32,7 @@ export type IconKey =
   | "settings"
   | "paint"
   | "music"
+  | "trophy"
 
 export interface VBase {
   /** Path segment, e.g. "vance". Unique among its siblings. */

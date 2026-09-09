@@ -5,6 +5,7 @@ import { useWindowKeys } from "@/components/desktop/use-window-keys"
 import { createGame, tick, turn, type Dir, type Game } from "./engine/snake"
 import { useHighScore } from "./useGameShell"
 import { GameFrame, TouchPad } from "./GameFrame"
+import { useHighScoreEntry } from "./useHighScoreEntry"
 
 const W = 26
 const H = 16
@@ -33,12 +34,15 @@ export default function Snake({
   const [game, setGame] = useState<Game>(() => createGame(W, H))
   const [paused, setPaused] = useState(false)
   const { best, submit } = useHighScore("snake")
+  const entry = useHighScoreEntry("snake")
   const gameRef = useRef(game)
   gameRef.current = game
 
   useEffect(() => {
-    if (game.dead) submit(game.score)
-  }, [game.dead, game.score, submit])
+    if (!game.dead) return
+    submit(game.score)
+    if (game.score > 0) entry.offer(game.score)
+  }, [game.dead, game.score, submit, entry])
 
   /**
    * Fixed-step loop, independent of frame rate.
@@ -127,6 +131,7 @@ export default function Snake({
         ) : undefined
       }
     >
+      {entry.prompt}
       <pre
         aria-label={`snake, score ${game.score}`}
         style={{

@@ -37,3 +37,10 @@ next-env.d.ts
 # playwright mcp artifacts
 .playwright-mcp/
 *.png.tmp
+
+.env*
+
+# agent skill docs installed by the upstash integration
+.agents/
+.claude/
+skills-lock.json

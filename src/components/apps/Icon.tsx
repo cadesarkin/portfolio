@@ -209,6 +209,23 @@ function Music() {
   )
 }
 
+function Trophy() {
+  return (
+    <>
+      <path d="M4 2h8v5a4 4 0 0 1-8 0z" fill="#f0c268" />
+      <path d="M4 3H2v2a3 3 0 0 0 3 3M12 3h2v2a3 3 0 0 1-3 3" fill="none" stroke="#d9a13f" strokeWidth="1.2" />
+      <rect x="7" y="10.6" width="2" height="2.4" fill="#d9a13f" />
+      <rect x="4.5" y="13" width="7" height="1.8" fill="#e0a94a" />
+      <path
+        d="M4 2h8v5a4 4 0 0 1-8 0z"
+        fill="none"
+        stroke={OUTLINE}
+        strokeWidth="1"
+      />
+    </>
+  )
+}
+
 const SHAPES: Record<IconKey, () => React.JSX.Element> = {
   folder: Folder,
   file: Doc,
@@ -221,6 +238,7 @@ const SHAPES: Record<IconKey, () => React.JSX.Element> = {
   settings: Settings,
   paint: Paint,
   music: Music,
+  trophy: Trophy,
 }
 
 export function Icon({ name, size = 16 }: { name: IconKey; size?: number }) {

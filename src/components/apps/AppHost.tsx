@@ -14,6 +14,7 @@ import DisplayProperties from "./DisplayProperties"
 import ImageView from "./ImageView"
 import AsciiPaint from "./AsciiPaint"
 import Chiptune from "./Chiptune"
+import Leaderboard from "./Leaderboard"
 import type { VNode } from "@/lib/vfs-types"
 
 interface Props {
@@ -57,6 +58,8 @@ export default function AppHost({ node, winId, isMobile, onReboot }: Props) {
           return <AsciiPaint winId={winId} isMobile={isMobile} />
         case "music":
           return <Chiptune winId={winId} isMobile={isMobile} />
+        case "leaderboard":
+          return <Leaderboard />
       }
     case "link":
       // Links navigate rather than open; this is unreachable in practice.

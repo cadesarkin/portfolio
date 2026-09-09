@@ -422,6 +422,13 @@ export const root: VDir = {
     },
     {
       kind: "app",
+      name: "leaderboard",
+      app: "leaderboard",
+      icon: "trophy",
+      desc: "high scores across every game",
+    },
+    {
+      kind: "app",
       name: "paint",
       app: "paint",
       icon: "paint",
