@@ -17,6 +17,7 @@ import {
   type Card,
   type Deck,
 } from "@/lib/mtg"
+import Duel from "./Duel"
 import CardFace, { Cost } from "./CardFace"
 
 const PIP_BG: Record<string, string> = {
@@ -28,7 +29,7 @@ const PIP_BG: Record<string, string> = {
   C: "#b9bfc4",
 }
 
-type Tab = "decks" | "packs"
+type Tab = "decks" | "packs" | "duel"
 
 export default function Arcanum() {
   const [tab, setTab] = useState<Tab>("decks")
@@ -56,7 +57,7 @@ export default function Arcanum() {
           background: "rgba(9, 6, 18, 0.72)",
         }}
       >
-        {(["decks", "packs"] as Tab[]).map((t) => (
+        {(["decks", "packs", "duel"] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
@@ -92,7 +93,7 @@ export default function Arcanum() {
           background: "rgba(9, 6, 18, 0.84)",
         }}
       >
-        {tab === "decks" ? <DeckView deck={deck} /> : <PackView />}
+        {tab === "decks" ? <DeckView deck={deck} /> : tab === "packs" ? <PackView /> : <Duel />}
       </div>
     </div>
   )
