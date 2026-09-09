@@ -316,7 +316,10 @@ export default function Golf({ winId }: { winId: string; isMobile: boolean }) {
       trail.current.forEach((p, i) => {
         const a = (i / trail.current.length) * 0.65
         if (a < 0.06) return
-        grid!.put(toCol(p.x), toRow(p.y), ".", `rgba(255,255,255,${a.toFixed(2)})`)
+        const col = toCol(p.x)
+        const row = toRow(p.y)
+        grid!.back(col, row, `rgba(12, 22, 30, ${(a * 0.8).toFixed(2)})`)
+        grid!.put(col, row, "o", `rgba(255,255,255,${(0.45 + a).toFixed(2)})`)
       })
 
       // Predicted arc while aiming: the same physics the swing will use.
@@ -333,7 +336,10 @@ export default function Golf({ winId }: { winId: string; isMobile: boolean }) {
           const px = g.ball.x + vx * s
           const py = g.ball.y + vy * s - 0.5 * GRAVITY * s * s
           if (py < groundAt(g.hole, px)) break
-          grid.put(toCol(px), toRow(py), i % 2 === 0 ? "." : "'", "rgba(255,255,255,0.34)")
+          const col = toCol(px)
+          const row = toRow(py)
+          grid.back(col, row, "rgba(10, 20, 28, 0.72)")
+          grid.put(col, row, i % 2 === 0 ? "+" : "x", "#ffe07a")
         }
       }
 
@@ -465,19 +471,50 @@ function Bar({
   active: boolean
   colour: string
 }) {
+  const pct = Math.max(0, Math.min(1, value))
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "2px 0", opacity: active ? 1 : 0.32 }}>
-      <span style={{ width: 44, fontSize: 11, color: "#8fa886" }}>{label}</span>
-      <div style={{ flex: "1 1 auto", height: 9, background: "rgba(255,255,255,0.08)", position: "relative" }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "3px 0",
+        opacity: active ? 1 : 0.55,
+      }}
+    >
+      <span style={{ width: 44, fontSize: 11, color: active ? "#e8f2e0" : "#8fa886" }}>
+        {label}
+      </span>
+      <div
+        style={{
+          flex: "1 1 auto",
+          height: 14,
+          background: "rgba(0,0,0,0.45)",
+          border: `1px solid ${active ? colour : "rgba(255,255,255,0.16)"}`,
+          position: "relative",
+        }}
+      >
         <div
           style={{
             position: "absolute",
             inset: "0 auto 0 0",
-            width: `${Math.max(0, Math.min(1, value)) * 100}%`,
+            width: `${pct * 100}%`,
             background: colour,
+            boxShadow: active ? `0 0 8px ${colour}` : undefined,
           }}
         />
       </div>
+      <span
+        style={{
+          width: 34,
+          fontSize: 11,
+          textAlign: "right",
+          color: active ? colour : "#8fa886",
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        {Math.round(pct * 100)}
+      </span>
     </div>
   )
 }
