@@ -9,7 +9,9 @@ import {
   isSpare,
   PIN_COUNT,
   PIN_LAYOUT,
+  HIT_RADIUS,
   type Game,
+  type Roll,
 } from "./bowling"
 
 /** Rolls `n` pins, choosing any n that are still standing. */
@@ -226,5 +228,81 @@ describe("resolveRoll", () => {
         if (!standing[i]) expect(felled[i]).toBe(false)
       }
     }
+  })
+})
+
+describe("how often a roll strikes", () => {
+  const full = () => new Array(PIN_COUNT).fill(true)
+
+  /** Strike rate over many random deliveries of the same shape. */
+  const strikeRate = (roll: Roll, n = 4000): number => {
+    let strikes = 0
+    for (let i = 0; i < n; i++) {
+      if (resolveRoll(full(), roll).every(Boolean)) strikes++
+    }
+    return strikes / n
+  }
+
+  /* The bug this pins down: chaining neighbours at a flat probability cleared
+     the rack on ~88% of deliveries, and on 70% of ones aimed well off line. */
+  it("does not strike on most throws", () => {
+    expect(strikeRate({ x: 0.09 })).toBeLessThan(0.55)
+  })
+
+  it("still strikes often enough to be worth aiming for", () => {
+    expect(strikeRate({ x: 0.09 })).toBeGreaterThan(0.2)
+  })
+
+  it("rewards the pocket over a ball out by the corner", () => {
+    expect(strikeRate({ x: 0.09 })).toBeGreaterThan(strikeRate({ x: 0.38 }) * 2)
+  })
+
+  it("almost never strikes from the edge of the rack", () => {
+    expect(strikeRate({ x: 0.38 })).toBeLessThan(0.2)
+  })
+
+  it("never strikes from a ball that misses the rack entirely", () => {
+    expect(strikeRate({ x: 0.9 })).toBe(0)
+  })
+
+  it("carries more pins at full power than at a crawl", () => {
+    const hard = strikeRate({ x: 0.09, power: 1 })
+    const soft = strikeRate({ x: 0.09, power: 0.15 })
+    expect(hard).toBeGreaterThan(soft)
+  })
+})
+
+describe("curve", () => {
+  const full = () => new Array(PIN_COUNT).fill(true)
+  const avgPins = (roll: Roll, n = 4000): number => {
+    let total = 0
+    for (let i = 0; i < n; i++) total += resolveRoll(full(), roll).filter(Boolean).length
+    return total / n
+  }
+
+  it("bends a wide ball back into the rack", () => {
+    // Starting outside the pins, hooking in beats holding the line.
+    expect(avgPins({ x: 0.3, curve: -0.35 })).toBeGreaterThan(avgPins({ x: 0.3, curve: 0 }))
+  })
+
+  it("takes a good line away when it hooks the wrong way", () => {
+    expect(avgPins({ x: 0.2, curve: 0.45 })).toBeLessThan(avgPins({ x: 0.2, curve: 0 }))
+  })
+
+  it("treats a bare number as a straight ball", () => {
+    const seeded = (seed: number) => () => {
+      seed = (seed * 1664525 + 1013904223) % 4294967296
+      return seed / 4294967296
+    }
+    expect(resolveRoll(full(), 0.09, seeded(4))).toEqual(
+      resolveRoll(full(), { x: 0.09, curve: 0, power: 1 }, seeded(4))
+    )
+  })
+})
+
+describe("HIT_RADIUS", () => {
+  it("is narrower than the gap between two pins", () => {
+    const gap = Math.abs(PIN_LAYOUT[1].x - PIN_LAYOUT[2].x)
+    expect(HIT_RADIUS).toBeLessThan(gap)
   })
 })

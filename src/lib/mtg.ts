@@ -183,45 +183,75 @@ export interface Pack {
 
 const RARITY_ORDER = ["common", "uncommon", "rare", "mythic"] as const
 
+export const PACK_SIZE = 14
+/** Every pack has exactly one land, as a real booster does. */
+export const LANDS_PER_PACK = 1
+export const UNCOMMONS_PER_PACK = 3
+
 /**
  * Opens a pack drawn from the cards across all three decks.
  *
  * This is a pack from *his collection*, not a real product: the pool is
- * whatever he actually plays. The slot structure still follows a real booster —
- * one rare or mythic, three uncommons, the rest commons — because that shape is
- * what makes opening one feel like opening one.
+ * whatever he actually plays. The slot structure follows a modern booster —
+ * one land, one to three rares or mythics, three uncommons, commons for the
+ * rest — because that shape is what makes opening one feel like opening one.
+ *
+ * The land is its own slot rather than something the other slots can roll,
+ * which is what keeps a pack from coming out half basics.
  */
 export function openPack(rng: () => number = Math.random): Pack {
   const pool = Object.values(CARDS)
+  const lands = pool.filter(isLand)
+  const spells = pool.filter((c) => !isLand(c))
+
   const byRarity = new Map<string, Card[]>()
-  for (const c of pool) {
+  for (const c of spells) {
     const key = RARITY_ORDER.includes(c.rarity as never) ? c.rarity : "common"
     const list = byRarity.get(key) ?? []
     list.push(c)
     byRarity.set(key, list)
   }
 
-  const take = (rarity: string, n: number): Card[] => {
-    const list = byRarity.get(rarity) ?? []
-    if (list.length === 0) return []
+  // Sampling without replacement, across the whole pack: no pack repeats a card.
+  const taken = new Set<string>()
+  const take = (from: Card[], n: number): Card[] => {
+    const available = from.filter((c) => !taken.has(c.name))
     const picked: Card[] = []
-    const used = new Set<number>()
-    // Sample without replacement so a pack never contains the same card twice.
-    for (let i = 0; i < n && used.size < list.length; i++) {
-      let idx = Math.floor(rng() * list.length)
-      while (used.has(idx)) idx = (idx + 1) % list.length
-      used.add(idx)
-      picked.push(list[idx])
+    for (let i = 0; i < n && picked.length < available.length; i++) {
+      let idx = Math.floor(rng() * available.length)
+      let guard = 0
+      while (taken.has(available[idx].name) && guard++ < available.length) {
+        idx = (idx + 1) % available.length
+      }
+      const card = available[idx]
+      if (taken.has(card.name)) break
+      taken.add(card.name)
+      picked.push(card)
     }
     return picked
   }
 
-  // Roughly one in eight rare slots is a mythic, as in a real booster.
-  const topSlot = rng() < 0.125 ? take("mythic", 1) : take("rare", 1)
-  const cards = [
-    ...(topSlot.length ? topSlot : take("rare", 1)),
-    ...take("uncommon", 3),
-    ...take("common", 10),
-  ]
-  return { cards }
+  // One rare, with a chance at a second and a slimmer one at a third.
+  let rares = 1
+  if (rng() < 0.26) rares++
+  if (rares === 2 && rng() < 0.22) rares++
+
+  const top: Card[] = []
+  for (let i = 0; i < rares; i++) {
+    // Roughly one rare slot in eight is a mythic, as in a real booster.
+    const wantMythic = rng() < 0.125
+    const drawn = wantMythic
+      ? take(byRarity.get("mythic") ?? [], 1)
+      : take(byRarity.get("rare") ?? [], 1)
+    top.push(...(drawn.length ? drawn : take(byRarity.get("rare") ?? [], 1)))
+  }
+
+  const uncommons = take(byRarity.get("uncommon") ?? [], UNCOMMONS_PER_PACK)
+  const land = take(lands, LANDS_PER_PACK)
+  const commons = take(
+    byRarity.get("common") ?? [],
+    PACK_SIZE - top.length - uncommons.length - land.length
+  )
+
+  return { cards: [...top, ...uncommons, ...commons, ...land] }
 }

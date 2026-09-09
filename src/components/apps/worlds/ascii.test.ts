@@ -9,7 +9,7 @@ describe("Grid", () => {
   it("writes and reads a cell", () => {
     const g = new Grid(4, 2)
     g.put(1, 1, "#", "red")
-    expect(g.at(1, 1)).toEqual({ ch: "#", color: "red" })
+    expect(g.at(1, 1)).toEqual({ ch: "#", color: "red", bg: "" })
   })
 
   it("rounds fractional positions to the nearest cell", () => {
@@ -45,6 +45,43 @@ describe("Grid", () => {
     g.clear()
     expect(g.toString()).toBe("   ")
     expect(g.at(0, 0).color).toBe("")
+  })
+})
+
+describe("Grid backgrounds", () => {
+  it("holds a background independently of the glyph", () => {
+    const g = new Grid(3, 2)
+    g.back(1, 0, "navy")
+    g.put(1, 0, "#", "red")
+    expect(g.at(1, 0)).toEqual({ ch: "#", color: "red", bg: "navy" })
+  })
+
+  /** A cell can be lit with no glyph in it — that is how sky is drawn. */
+  it("keeps a background on an empty cell", () => {
+    const g = new Grid(2, 1)
+    g.back(0, 0, "navy")
+    expect(g.at(0, 0).bg).toBe("navy")
+    expect(g.toString()).toBe("  ")
+  })
+
+  it("fills a row span, clipped to the grid", () => {
+    const g = new Grid(4, 1)
+    g.backRow(0, -3, 2, "navy")
+    expect([0, 1, 2, 3].map((c) => g.at(c, 0).bg)).toEqual(["navy", "navy", "navy", ""])
+  })
+
+  it("drops out-of-bounds backgrounds", () => {
+    const g = new Grid(2, 1)
+    g.back(9, 0, "navy")
+    g.back(0, 5, "navy")
+    expect(g.at(0, 0).bg).toBe("")
+  })
+
+  it("clears backgrounds too", () => {
+    const g = new Grid(2, 1)
+    g.back(0, 0, "navy")
+    g.clear()
+    expect(g.at(0, 0).bg).toBe("")
   })
 })
 

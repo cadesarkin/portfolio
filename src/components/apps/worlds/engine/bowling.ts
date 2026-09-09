@@ -172,40 +172,90 @@ export const PIN_LAYOUT: { x: number; y: number }[] = (() => {
   return out
 })()
 
+/** A delivery: where it crosses the head pin, how much it hooks, how hard. */
+export interface Roll {
+  /** Lane position at the head pin, in lane units. */
+  x: number
+  /** Hook, negative to the left. Bends the path through the rack. */
+  curve?: number
+  /** 0..1. A weak ball reaches the rack with less to give. */
+  power?: number
+}
+
+/** Ball half-width, in lane units. */
+export const HIT_RADIUS = 0.12
+/** Two pins closer together than this are neighbours in the rack. */
+const NEIGHBOUR = 0.3
+/** What a falling pin passes on to a neighbour it reaches. */
+const CARRY = 0.68
+/** What the ball gives up to each pin it ploughs through. */
+const DRAIN = 0.16
+/** How far a pin knocks the ball off its line. */
+const DEFLECT = 0.06
+
+/** Pins nearest the bowler first: the ball meets the rack in this order. */
+const BY_DEPTH = PIN_LAYOUT.map((_, i) => i).sort(
+  (a, b) => PIN_LAYOUT[a].y - PIN_LAYOUT[b].y
+)
+
 /**
- * Which pins a ball at lane position `x` with spin `curve` knocks down.
+ * Which pins a delivery knocks down.
  *
- * Not a physics simulation: a ball that arrives near a pin fells it, and each
- * felled pin has a chance to take its neighbours with it. Two passes of that
- * is enough to produce splits, taps and the occasional strike from a thin hit,
- * which is what makes the game feel like bowling rather than a dice roll.
+ * Not a physics simulation, but energy is conserved in spirit, and that is what
+ * makes aim matter. The ball ploughs through the rack, spending energy on each
+ * pin it meets and deflecting off it; each falling pin passes a damped share to
+ * its neighbours. A pocket hit puts four pins in motion at once and the rack
+ * goes over; a ball that clips the corner starts one chain that dies out.
+ *
+ * An earlier version chained neighbours at a flat probability, independent of
+ * where the ball went. That is a percolation problem: measured, it either
+ * cleared the rack 88% of the time or barely spread at all, with almost nothing
+ * in between, and aim made no difference to which. Carrying the ball's own
+ * energy through the chain is what separates a good line from a bad one.
  */
 export function resolveRoll(
   standing: boolean[],
-  x: number,
+  roll: Roll | number,
   rng: () => number = Math.random
 ): boolean[] {
+  const { x, curve = 0, power = 1 } = typeof roll === "number" ? { x: roll } : roll
   const felled = new Array(PIN_COUNT).fill(false)
-  const HIT_RADIUS = 0.115
+  const energy = new Array(PIN_COUNT).fill(0)
+  const queue: number[] = []
 
-  for (let i = 0; i < PIN_COUNT; i++) {
-    if (!standing[i]) continue
+  // The ball's path through the rack, hooking as it goes.
+  let ballX = x
+  let ballEnergy = 0.55 + 0.45 * Math.max(0, Math.min(1, power))
+  for (const i of BY_DEPTH) {
     const pin = PIN_LAYOUT[i]
-    // Pins deeper in the rack are harder to reach directly.
-    const reach = HIT_RADIUS * (1 - pin.y * 0.28)
-    if (Math.abs(pin.x - x) < reach) felled[i] = true
+    const at = ballX + curve * pin.y * 0.9
+    const off = Math.abs(pin.x - at)
+    if (off >= HIT_RADIUS) continue
+    // How squarely the ball caught it: a thin hit passes on very little.
+    const square = 1 - off / HIT_RADIUS
+    if (standing[i]) {
+      felled[i] = true
+      energy[i] = ballEnergy * (0.4 + 0.6 * square)
+      queue.push(i)
+    }
+    ballEnergy *= 1 - DRAIN * square
+    ballX += (at >= pin.x ? 1 : -1) * DEFLECT * square
   }
 
-  for (let pass = 0; pass < 2; pass++) {
-    for (let i = 0; i < PIN_COUNT; i++) {
-      if (!felled[i]) continue
-      for (let j = 0; j < PIN_COUNT; j++) {
-        if (felled[j] || !standing[j]) continue
-        const d = Math.hypot(
-          PIN_LAYOUT[i].x - PIN_LAYOUT[j].x,
-          PIN_LAYOUT[i].y - PIN_LAYOUT[j].y
-        )
-        if (d < 0.3 && rng() < 0.62) felled[j] = true
+  // Falling pins take their neighbours with them, weakening as they spread.
+  for (let q = 0; q < queue.length; q++) {
+    const i = queue[q]
+    for (let j = 0; j < PIN_COUNT; j++) {
+      if (felled[j] || !standing[j]) continue
+      const d = Math.hypot(
+        PIN_LAYOUT[i].x - PIN_LAYOUT[j].x,
+        PIN_LAYOUT[i].y - PIN_LAYOUT[j].y
+      )
+      if (d >= NEIGHBOUR) continue
+      if (rng() < energy[i]) {
+        felled[j] = true
+        energy[j] = energy[i] * CARRY
+        queue.push(j)
       }
     }
   }

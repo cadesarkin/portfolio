@@ -39,8 +39,17 @@ export interface Game {
 
 export const HOLES = 9
 export const GRAVITY = 22
-/** Within this many metres of the pin, at rest, the ball drops. */
+/** Within this many metres of the pin the ball is over the cup. */
 export const CUP_RADIUS = 1.6
+/**
+ * How fast the ball may be moving across the cup and still drop.
+ *
+ * Requiring it to come to rest inside the cup made holing out all but
+ * impossible: the ball has to stop within a 1.6 m window, and friction rarely
+ * obliges. A ball rolling slowly over the hole falls in, as it does on grass.
+ * A ball travelling faster than this lips out and rolls on.
+ */
+export const CUP_SPEED = 4.2
 
 function rand(seed: number): () => number {
   let s = seed
@@ -154,11 +163,22 @@ export function swing(g: Game, power: number, angleDeg: number): Game {
     strokes: g.strokes + 1,
     ball: {
       ...g.ball,
-      vx: Math.cos(a) * speed,
+      vx: Math.cos(a) * speed * facing(g),
       vy: Math.sin(a) * speed,
       moving: true,
     },
   }
+}
+
+/**
+ * Which way the next shot is played: +1 up the hole, -1 back toward the tee.
+ *
+ * Every shot used to go right, so overshooting the green left you unable to
+ * play back to it — you could only hit further away. The player always means to
+ * hit at the pin, so the ball simply turns round when it is past it.
+ */
+export function facing(g: Game): 1 | -1 {
+  return g.ball.x > g.hole.pinX ? -1 : 1
 }
 
 /** Advances the ball. Call at a fixed timestep. */
@@ -202,7 +222,11 @@ export function step(g: Game, dt: number): Game {
   }
 
   const moving = Math.abs(vx) > 0.12 || y > ground + 0.05 || Math.abs(vy) > 0.12
-  const holed = !moving && Math.abs(x - hole.pinX) <= CUP_RADIUS
+
+  // Over the cup, on the deck, and slow enough to drop in.
+  const overCup = Math.abs(x - hole.pinX) <= CUP_RADIUS
+  const onDeck = y <= ground + 0.05
+  const holed = overCup && (!moving || (onDeck && Math.abs(vx) <= CUP_SPEED))
 
   return {
     ...g,

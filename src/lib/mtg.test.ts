@@ -13,6 +13,9 @@ import {
   costSymbols,
   openPack,
   isLand,
+  PACK_SIZE,
+  LANDS_PER_PACK,
+  UNCOMMONS_PER_PACK,
 } from "./mtg"
 
 const seeded = (seed: number) => () => {
@@ -209,22 +212,52 @@ describe("costSymbols", () => {
 
 describe("openPack", () => {
   it("opens fourteen cards", () => {
-    expect(openPack(seeded(1)).cards).toHaveLength(14)
+    expect(openPack(seeded(1)).cards).toHaveLength(PACK_SIZE)
   })
 
-  it("contains exactly one rare or mythic", () => {
-    for (let s = 1; s <= 30; s++) {
+  /* Counted over the spells: the land slot draws from every rarity, so a rare
+     land is a fourth rare card in the pack without being a fourth rare slot. */
+  it("contains one to three rares or mythics", () => {
+    for (let s = 1; s <= 40; s++) {
       const top = openPack(seeded(s)).cards.filter(
-        (c) => c.rarity === "rare" || c.rarity === "mythic"
+        (c) => !isLand(c) && (c.rarity === "rare" || c.rarity === "mythic")
       )
-      expect(top.length, `seed ${s}`).toBe(1)
+      expect(top.length, `seed ${s}`).toBeGreaterThanOrEqual(1)
+      expect(top.length, `seed ${s}`).toBeLessThanOrEqual(3)
     }
   })
 
-  it("contains three uncommons", () => {
+  it("sometimes opens more than one rare", () => {
+    let extra = 0
+    for (let s = 1; s <= 120; s++) {
+      const top = openPack(seeded(s)).cards.filter(
+        (c) => !isLand(c) && (c.rarity === "rare" || c.rarity === "mythic")
+      )
+      if (top.length > 1) extra++
+    }
+    expect(extra, "a second rare should turn up sometimes").toBeGreaterThan(0)
+  })
+
+  /* A pack that comes out half basics is not a pack. The land has its own
+     slot, and no other slot may draw one. */
+  it("contains exactly one land", () => {
+    for (let s = 1; s <= 40; s++) {
+      const lands = openPack(seeded(s)).cards.filter((c) => isLand(c))
+      expect(lands.length, `seed ${s}`).toBe(LANDS_PER_PACK)
+    }
+  })
+
+  it("fills the rest with commons and uncommons", () => {
     for (let s = 1; s <= 20; s++) {
-      const u = openPack(seeded(s)).cards.filter((c) => c.rarity === "uncommon")
-      expect(u.length, `seed ${s}`).toBe(3)
+      const cards = openPack(seeded(s)).cards
+      const spells = cards.filter((c) => !isLand(c))
+      const top = spells.filter((c) => c.rarity === "rare" || c.rarity === "mythic")
+      const uncommon = spells.filter((c) => c.rarity === "uncommon")
+      const common = spells.filter((c) => c.rarity === "common")
+      expect(uncommon.length, `seed ${s}`).toBe(UNCOMMONS_PER_PACK)
+      expect(top.length + uncommon.length + common.length, `seed ${s}`).toBe(
+        PACK_SIZE - LANDS_PER_PACK
+      )
     }
   })
 

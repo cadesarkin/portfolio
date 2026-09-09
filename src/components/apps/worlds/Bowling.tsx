@@ -18,7 +18,7 @@ import {
   type Game,
 } from "./engine/bowling"
 
-type Phase = "aim" | "power" | "rolling" | "settled"
+type Phase = "aim" | "curve" | "power" | "rolling" | "settled"
 
 /** Lane geometry, in the same -1..1 lane units the engine uses. */
 const LANE_HALF = 0.62
@@ -40,9 +40,10 @@ export default function Bowling({ winId }: { winId: string; isMobile: boolean })
   const [message, setMessage] = useState<string | null>(null)
 
   /** Oscillating meters and the live ball, kept out of state to avoid churn. */
-  const meter = useRef({ aim: 0, power: 0, dir: 1 })
+  const meter = useRef({ aim: 0, curve: 0, power: 0, dir: 1 })
   const ball = useRef({ x: 0, z: 1, rolling: false })
-  const lockedAim = useRef(0)
+  /** The line and hook the ball was sent down, held for the roll. */
+  const shot = useRef({ aim: 0, curve: 0, power: 1 })
   const gameRef = useRef(game)
   gameRef.current = game
   const phaseRef = useRef(phase)
@@ -52,27 +53,32 @@ export default function Bowling({ winId }: { winId: string; isMobile: boolean })
     setGame(createGame())
     setPhase("aim")
     setMessage(null)
+    meter.current = { aim: 0, curve: 0, power: 0, dir: 1 }
     ball.current = { x: 0, z: 1, rolling: false }
   }, [])
 
-  const throwBall = useCallback((aim: number, power: number) => {
+  const throwBall = useCallback((aim: number, curve: number, power: number) => {
     setPhase("rolling")
-    // Power bends the path: a hard ball runs straighter, a soft one drifts.
-    const drift = (1 - power) * 0.22 * (aim >= 0 ? 1 : -1)
+    // A slower ball has longer to bite, so it hooks further.
+    shot.current = { aim, curve: curve * (1.3 - power * 0.55), power }
     ball.current = { x: aim, z: 1, rolling: true }
-    lockedAim.current = aim + drift
   }, [])
 
   const advance = useCallback(() => {
     if (phase === "aim") {
-      lockedAim.current = meter.current.aim
+      meter.current.curve = 0
+      meter.current.dir = 1
+      setPhase("curve")
+      return
+    }
+    if (phase === "curve") {
       meter.current.power = 0
       meter.current.dir = 1
       setPhase("power")
       return
     }
     if (phase === "power") {
-      throwBall(lockedAim.current, meter.current.power)
+      throwBall(meter.current.aim, meter.current.curve, meter.current.power)
       return
     }
     if (phase === "settled") {
@@ -113,6 +119,16 @@ export default function Bowling({ winId }: { winId: string; isMobile: boolean })
           meter.current.aim = -LANE_HALF
           meter.current.dir = 1
         }
+      } else if (phase === "curve") {
+        // Swings both ways through zero: the middle is a straight ball.
+        meter.current.curve += meter.current.dir * dt * 1.5
+        if (meter.current.curve > 1) {
+          meter.current.curve = 1
+          meter.current.dir = -1
+        } else if (meter.current.curve < -1) {
+          meter.current.curve = -1
+          meter.current.dir = 1
+        }
       } else if (phase === "power") {
         meter.current.power += meter.current.dir * dt * 1.15
         if (meter.current.power > 1) {
@@ -125,11 +141,18 @@ export default function Bowling({ winId }: { winId: string; isMobile: boolean })
       } else if (phase === "rolling" && ball.current.rolling) {
         // z runs 1 (foul line) to 0 (the rack).
         ball.current.z -= dt * 0.75
-        // The ball tracks toward its final line as it travels.
-        ball.current.x += (lockedAim.current - ball.current.x) * dt * 1.6
+        /* The hook builds as the ball loses speed, so the path is straight off
+           the hand and bends late — which is what makes the curve worth using
+           rather than just an offset on the aim. */
+        const travelled = 1 - Math.max(0, ball.current.z)
+        ball.current.x = shot.current.aim + shot.current.curve * travelled * travelled * 0.42
         if (ball.current.z <= 0) {
           ball.current.rolling = false
-          const felled = resolveRoll(gameRef.current.standing, ball.current.x)
+          const felled = resolveRoll(gameRef.current.standing, {
+            x: ball.current.x,
+            curve: shot.current.curve,
+            power: shot.current.power,
+          })
           const knocked = felled.filter(Boolean).length
           const next = roll(gameRef.current, felled)
           const frame = next.frames[Math.min(gameRef.current.current, FRAMES - 1)]
@@ -203,55 +226,52 @@ export default function Bowling({ winId }: { winId: string; isMobile: boolean })
       const colFor = (x: number, z: number) => mid + x * cols * 0.42 * scaleFor(z)
       const halfFor = (z: number) => Math.abs(colFor(LANE_HALF, z) - mid)
 
-      /* A wash under the boards, in the same spirit as the wallpaper filling a
-         colour behind each cell: the glyphs alone are too sparse to read as a
-         lit, polished lane. */
-      const px = (c: number) => c * m!.cw
-      const py = (r: number) => r * m!.ch
-      ctx.beginPath()
-      ctx.moveTo(px(colFor(-LANE_HALF, 0)), py(deck))
-      ctx.lineTo(px(colFor(LANE_HALF, 0)), py(deck))
-      ctx.lineTo(px(colFor(LANE_HALF, 1)), py(foul + 1))
-      ctx.lineTo(px(colFor(-LANE_HALF, 1)), py(foul + 1))
-      ctx.closePath()
-      const boards = ctx.createLinearGradient(0, py(deck), 0, py(foul + 1))
-      boards.addColorStop(0, "#241708")
-      boards.addColorStop(1, "#5c3d1c")
-      ctx.fillStyle = boards
-      ctx.fill()
-
-      // The pin deck sits in shadow, so cream pins read against the boards.
-      ctx.fillStyle = "rgba(0, 0, 0, 0.4)"
-      ctx.fillRect(0, py(deck), rect.width, py(rowFor(RACK_Z) + 2) - py(deck))
+      /* Colour lives in the cells, as it does on the wallpaper: a filled
+         trapezoid under the glyphs is a smooth shape pasted into a character
+         scene, and its edges do not land on the grid. */
 
       // The back wall behind the pit.
       for (let r = 0; r < deck; r++) {
         for (let c = 0; c < cols; c++) {
+          grid.back(c, r, "#140d07")
           const n = vnoise(c * 0.22, r * 0.6 + 3)
-          if (n > 0.34) grid.put(c, r, ramp(".:-", (n - 0.34) * 4), "rgba(96,70,48,0.5)")
+          if (n > 0.3) grid.put(c, r, ramp(".:-", (n - 0.3) * 4), "rgba(112,82,56,0.5)")
         }
       }
 
       // Lane and gutters.
+      const deckEnd = rowFor(RACK_Z) + 2
       for (let r = deck; r <= foul; r++) {
         const z = (r - deck) / Math.max(1, foul - deck)
         const half = Math.max(1, halfFor(z))
+        // The pin deck stands in shadow, so cream pins read against the boards.
+        const shade = r < deckEnd ? 0.55 : 1
         for (let c = Math.floor(mid - half * 1.2); c <= Math.ceil(mid + half * 1.2); c++) {
           const u = (c - mid) / half
           if (Math.abs(u) > 1.16) continue
           if (Math.abs(u) > 1.0) {
-            grid.put(c, r, "~", "rgba(78,58,40,0.9)")
+            grid.back(c, r, "#140d08")
+            grid.put(c, r, "~", "rgba(96,72,50,0.9)")
             continue
           }
           const grain = vnoise(u * 26, r * 0.9)
           // A highlight running down the lane, as light off a polished board.
           const sheen = Math.exp(-Math.pow((u + 0.12) / 0.55, 2)) * 0.4
           const lum = Math.max(0, Math.min(1, 0.2 + grain * 0.3 + sheen + z * 0.2))
+          grid.back(
+            c,
+            r,
+            `rgb(${(56 + lum * 70) * shade | 0}, ${(36 + lum * 52) * shade | 0}, ${
+              (16 + lum * 30) * shade | 0
+            })`
+          )
           grid.put(
             c,
             r,
             ramp(".::--=+", lum),
-            `rgb(${(120 + lum * 110) | 0}, ${(84 + lum * 92) | 0}, ${(44 + lum * 70) | 0})`
+            `rgb(${(130 + lum * 110) * shade | 0}, ${(92 + lum * 92) * shade | 0}, ${
+              (48 + lum * 70) * shade | 0
+            })`
           )
         }
       }
@@ -275,15 +295,17 @@ export default function Bowling({ winId }: { winId: string; isMobile: boolean })
       const foulHalf = halfFor(1)
       grid.line(mid - foulHalf, foul, mid + foulHalf, foul, "=", "rgba(230,196,140,0.55)")
 
-      // Aiming line, running from the foul line to the head pin.
-      if (phaseNow === "aim" || phaseNow === "power") {
-        const x = phaseNow === "aim" ? meter.current.aim : lockedAim.current
-        const colour = phaseNow === "aim" ? "rgba(255,209,102,0.85)" : "rgba(255,209,102,0.4)"
+      // The line the ball will take, hook included once the curve is set.
+      if (phaseNow === "aim" || phaseNow === "curve" || phaseNow === "power") {
+        const aim = meter.current.aim
+        const bend = phaseNow === "aim" ? 0 : meter.current.curve * 0.42
+        const colour = phaseNow === "power" ? "rgba(255,209,102,0.45)" : "rgba(255,209,102,0.85)"
         // The dashes march up the lane, so the guide reads as live.
         const phase = Math.floor(t * 7) % 2
         for (let r = Math.round(rowFor(RACK_Z)) + phase; r <= foul; r += 2) {
           const z = (r - deck) / Math.max(1, foul - deck)
-          grid.put(colFor(x, z), r, ":", colour)
+          const travelled = Math.max(0, Math.min(1, (1 - z) / (1 - RACK_Z)))
+          grid.put(colFor(aim + bend * travelled * travelled, z), r, ":", colour)
         }
       }
 
@@ -361,6 +383,12 @@ export default function Bowling({ winId }: { winId: string; isMobile: boolean })
           colour="#ffd166"
         />
         <Meter
+          label="curve"
+          value={(meter.current.curve + 1) / 2}
+          active={phase === "curve"}
+          colour="#7fc9e0"
+        />
+        <Meter
           label="power"
           value={meter.current.power}
           active={phase === "power"}
@@ -427,11 +455,13 @@ export default function Bowling({ winId }: { winId: string; isMobile: boolean })
           ? `final score ${total(game)} — space to bowl again`
           : phase === "aim"
             ? "space to lock your line"
-            : phase === "power"
-              ? "space to set power"
-              : phase === "rolling"
-                ? "…"
-                : "space for the next ball"}
+            : phase === "curve"
+              ? "space to set the hook — the middle is straight"
+              : phase === "power"
+                ? "space to set power"
+                : phase === "rolling"
+                  ? "…"
+                  : "space for the next ball"}
       </div>
     </div>
   )

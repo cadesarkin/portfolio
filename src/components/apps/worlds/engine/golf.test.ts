@@ -12,7 +12,9 @@ import {
   scoreName,
   HOLES,
   CUP_RADIUS,
+  CUP_SPEED,
   LIE_POWER,
+  facing,
   type Game,
 } from "./golf"
 
@@ -187,6 +189,65 @@ describe("holing out", () => {
     expect(step(away, 0.016).holed).toBe(false)
   })
 
+  /* The bug: the ball had to come to rest inside a 1.6 m window, which
+     friction almost never arranged, so putts rolled over the hole forever. */
+  it("drops when the ball rolls slowly over the cup", () => {
+    const base = createGame(1)
+    const rolling: Game = {
+      ...base,
+      ball: {
+        x: base.hole.pinX,
+        y: groundAt(base.hole, base.hole.pinX),
+        vx: CUP_SPEED * 0.5,
+        vy: 0,
+        moving: true,
+      },
+    }
+    expect(step(rolling, 0.016).holed).toBe(true)
+  })
+
+  it("lips out when the ball is travelling too fast", () => {
+    const base = createGame(1)
+    const quick: Game = {
+      ...base,
+      ball: {
+        x: base.hole.pinX,
+        y: groundAt(base.hole, base.hole.pinX),
+        vx: CUP_SPEED * 3,
+        vy: 0,
+        moving: true,
+      },
+    }
+    expect(step(quick, 0.016).holed).toBe(false)
+  })
+
+  /** A ball flying over the pin at height is not in the hole. */
+  it("does not drop from the air above the cup", () => {
+    const base = createGame(1)
+    const airborne: Game = {
+      ...base,
+      ball: {
+        x: base.hole.pinX,
+        y: groundAt(base.hole, base.hole.pinX) + 9,
+        vx: 1,
+        vy: 0,
+        moving: true,
+      },
+    }
+    expect(step(airborne, 0.016).holed).toBe(false)
+  })
+
+  it("can be holed out by actually playing the hole", () => {
+    // Walk the ball in from the fringe with putts until it drops.
+    let g = createGame(1)
+    g = { ...g, ball: { ...g.ball, x: g.hole.pinX - 18, y: groundAt(g.hole, g.hole.pinX - 18) } }
+    for (let i = 0; i < 40 && !g.holed; i++) {
+      const d = distanceToPin(g)
+      g = settle(swing(g, Math.min(0.5, 0.06 + d * 0.011), 12))
+    }
+    expect(g.holed, `${distanceToPin(g).toFixed(2)} m from the pin`).toBe(true)
+  })
+
   it("refuses further swings once holed", () => {
     const g = { ...createGame(1), holed: true }
     expect(swing(g, 0.5, 30)).toBe(g)
@@ -244,5 +305,36 @@ describe("scoreName", () => {
 
   it("falls back to a number for a blow-up hole", () => {
     expect(scoreName(9, 4)).toBe("+5")
+  })
+})
+
+describe("facing", () => {
+  it("plays up the hole from the tee", () => {
+    expect(facing(createGame(1))).toBe(1)
+  })
+
+  /* The bug: every shot went right, so overshooting the green left the hole
+     unplayable — you could only hit further past it. */
+  it("turns round once the ball is past the pin", () => {
+    const g = createGame(1)
+    const past = { ...g, ball: { ...g.ball, x: g.hole.pinX + 30 } }
+    expect(facing(past)).toBe(-1)
+  })
+
+  it("sends the ball back toward the pin when it has overshot", () => {
+    const g = createGame(1)
+    const past = {
+      ...g,
+      ball: { ...g.ball, x: g.hole.pinX + 30, y: groundAt(g.hole, g.hole.pinX + 30) },
+    }
+    expect(swing(past, 0.5, 30).ball.vx).toBeLessThan(0)
+  })
+
+  it("closes on the pin from beyond it", () => {
+    const g = createGame(1)
+    const start = g.hole.pinX + 40
+    const past = { ...g, ball: { ...g.ball, x: start, y: groundAt(g.hole, start) } }
+    const after = settle(swing(past, 0.32, 24))
+    expect(distanceToPin(after)).toBeLessThan(distanceToPin(past))
   })
 })

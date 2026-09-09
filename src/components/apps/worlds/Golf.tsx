@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useWindowKeys } from "@/components/desktop/use-window-keys"
 import { vnoise } from "@/lib/scene"
+import { SKY_RAMP, GRASS_RAMP } from "@/lib/bliss-palette"
 import { Grid, fitCanvas, measure, ramp, type Metrics } from "./ascii"
 import {
   createGame,
@@ -14,6 +15,7 @@ import {
   nextHole,
   toPar,
   scoreName,
+  facing,
   GRAVITY,
   HOLES,
   LIE_POWER,
@@ -31,18 +33,24 @@ const LIE_LABEL: Record<Lie, string> = {
   green: "the green",
 }
 
-/** Surface glyphs and colour per lie. Two glyphs so the turf is not a flat rule. */
-const TURF: Record<Lie, { chars: string; rgb: [number, number, number] }> = {
-  tee: { chars: "==", rgb: [126, 172, 96] },
-  fairway: { chars: ",.", rgb: [104, 160, 78] },
-  rough: { chars: "Wwv", rgb: [58, 98, 46] },
-  bunker: { chars: "..:", rgb: [216, 200, 152] },
-  green: { chars: "..", rgb: [146, 202, 118] },
+/** Turf colour per lie. The glyph comes from the shared grass ramp. */
+const TURF: Record<Lie, { rgb: [number, number, number] }> = {
+  tee: { rgb: [126, 172, 96] },
+  fairway: { rgb: [104, 160, 78] },
+  rough: { rgb: [64, 104, 48] },
+  bunker: { rgb: [216, 200, 152] },
+  green: { rgb: [150, 206, 120] },
 }
 
 const SOIL: [number, number, number] = [26, 40, 24]
 
 const rgb = (c: [number, number, number]) => `rgb(${c[0]}, ${c[1]}, ${c[2]})`
+
+const lift = (c: [number, number, number], t: number): [number, number, number] => [
+  Math.round(c[0] + (255 - c[0]) * t),
+  Math.round(c[1] + (255 - c[1]) * t),
+  Math.round(c[2] + (255 - c[2]) * t),
+]
 
 const mix = (
   a: [number, number, number],
@@ -197,13 +205,21 @@ export default function Golf({ winId }: { winId: string; isMobile: boolean }) {
       grid.clear()
 
       const { cols, rows } = grid
+      // Every cell gets a background below, but clear anyway: a gap would
+      // otherwise hold the previous frame.
+      ctx.fillStyle = "#0b1a22"
+      ctx.fillRect(0, 0, rect.width, rect.height)
 
       /* Camera. Horizontal follows the ball; vertical zooms out to keep a high
          shot in frame, eased so the ground does not jump under the player. */
       const span = Math.max(90, g.hole.length * 0.55)
-      const centre = Math.min(
-        Math.max(g.ball.x, span / 2),
-        Math.max(g.hole.pinX - span / 2 + 20, span / 2)
+      /* Follow the ball, but frame both once the pin is close enough to share
+         the shot — and keep following past the pin, since the ball can now be
+         played back toward it. */
+      const near = Math.abs(g.hole.pinX - g.ball.x) < span * 0.42
+      const centre = Math.max(
+        span / 2 - 12,
+        near ? (g.ball.x + g.hole.pinX) / 2 : g.ball.x
       )
       const x0 = centre - span / 2
       const baseRow = Math.round(rows * 0.74)
@@ -224,55 +240,53 @@ export default function Golf({ winId }: { winId: string; isMobile: boolean }) {
         lies[c] = lieAt(g.hole, x)
       }
 
-      /* Colour washes under the glyphs.
-         The wallpaper fills a colour behind every cell before drawing it; this
-         is the same idea done in two fills. Without it the glyphs are lit dots
-         on black and a bright summer links reads as midnight. */
-      const skyWash = ctx.createLinearGradient(0, 0, 0, rect.height)
-      skyWash.addColorStop(0, "#123c5e")
-      skyWash.addColorStop(1, "#6f9db2")
-      ctx.fillStyle = skyWash
-      ctx.fillRect(0, 0, rect.width, rect.height)
-
-      ctx.beginPath()
-      ctx.moveTo(0, rect.height)
-      for (let c = 0; c < cols; c++) ctx.lineTo(c * m.cw, groundRow[c] * m.ch)
-      ctx.lineTo(rect.width, groundRow[cols - 1] * m.ch)
-      ctx.lineTo(rect.width, rect.height)
-      ctx.closePath()
-      const turfWash = ctx.createLinearGradient(0, Math.min(...groundRow) * m.ch, 0, rect.height)
-      turfWash.addColorStop(0, "#4c7a3a")
-      turfWash.addColorStop(1, "#16301c")
-      ctx.fillStyle = turfWash
-      ctx.fill()
-
-      /* Sky: drifting cloud banks.
-         The thresholds are set against this noise's real distribution, which
-         runs 0..0.5 with a median near 0.23 — not 0..1. Treating it as 0..1
-         put cloud over a third of the sky and left no sky at all. */
+      /* Colour goes behind the cells and a glyph goes in every one of them,
+         exactly as the wallpaper does it. A gradient and a filled ground path
+         put smooth curves in the middle of a character scene, which read as a
+         different picture pasted over the top. Every edge here is on the grid. */
       const skyFloor = Math.min(...groundRow)
-      for (let r = 0; r < Math.min(rows, Math.ceil(skyFloor)); r++) {
-        for (let c = 0; c < cols; c++) {
-          const n = vnoise(c * 0.06 - t * 0.3, r * 0.22)
-          if (n <= 0.375) continue
-          const d = Math.min(1, (n - 0.375) / 0.115)
-          grid.put(c, r, ramp(".:-=+*", d), `rgba(246, 250, 255, ${(0.2 + d * 0.62).toFixed(2)})`)
-        }
-      }
 
-      // Terrain.
-      for (let c = 0; c < cols; c++) {
-        const gr = groundRow[c]
-        const turf = TURF[lies[c]]
-        const top = Math.round(gr)
-        grid.put(c, top, turf.chars[c % turf.chars.length], rgb(turf.rgb))
-        for (let r = top + 1; r < rows; r++) {
-          const d = Math.min(1, (r - top) / 9)
+      // Sky: graded by height, textured everywhere, with cloud banks drifting.
+      for (let r = 0; r < rows; r++) {
+        const k = Math.min(1, r / Math.max(1, skyFloor))
+        const bg = `rgb(${(24 + k * 78) | 0}, ${(66 + k * 96) | 0}, ${(104 + k * 74) | 0})`
+        for (let c = 0; c < cols; c++) {
+          grid.back(c, r, bg)
+          /* Thresholds set against this noise's real distribution, which runs
+             0..0.5 with a median near 0.23 — not 0..1. Read as 0..1 it put
+             cloud over a third of the sky and left no sky at all. */
+          const n = vnoise(c * 0.06 - t * 0.3, r * 0.22)
+          const cloud = Math.max(0, (n - 0.34) / 0.16)
+          const texture = 0.18 + vnoise(c * 0.5, r * 0.9) * 0.5
+          const ink = Math.min(1, texture * 0.5 + cloud * 0.95)
+          const white = Math.min(1, cloud * 0.9)
           grid.put(
             c,
             r,
-            ramp("#%*+=:-.", d * 0.8),
-            rgb(mix(turf.rgb, SOIL, 0.12 + d * 0.75))
+            ramp(SKY_RAMP, ink),
+            `rgb(${(120 + white * 130 + k * 40) | 0}, ${(160 + white * 90 + k * 40) | 0}, ${
+              (200 + white * 52 + k * 20) | 0
+            })`
+          )
+        }
+      }
+
+      // Turf: dense grass to the surface, darkening into soil below it.
+      for (let c = 0; c < cols; c++) {
+        const turf = TURF[lies[c]]
+        const top = Math.round(groundRow[c])
+        for (let r = Math.max(0, top); r < rows; r++) {
+          const depth = Math.min(1, (r - top) / 11)
+          // A lit ridge along the surface, as on the wallpaper's hills.
+          const crest = r === top ? 0.3 : 0
+          const n = vnoise(c * 0.42, r * 0.55 + 30)
+          const shade = mix(turf.rgb, SOIL, 0.3 + depth * 0.62 - crest)
+          grid.back(c, r, rgb(shade))
+          grid.put(
+            c,
+            r,
+            ramp(GRASS_RAMP, 0.3 + n * 0.9 - depth * 0.25),
+            rgb(lift(shade, 0.16 + crest * 0.7 + n * 0.3))
           )
         }
       }
@@ -291,8 +305,11 @@ export default function Golf({ winId }: { winId: string; isMobile: boolean }) {
         grid.put(pinCol, pinRow, "U", "#14210f")
       } else {
         // The pin is out of shot; say which way it is and how far.
-        const label = `${Math.round(distanceToPin(g))}m >>`
-        grid.text(cols - label.length - 2, 4, label, "rgba(255,240,180,0.75)")
+        const behind = facing(g) < 0
+        const label = behind
+          ? `<< ${Math.round(distanceToPin(g))}m`
+          : `${Math.round(distanceToPin(g))}m >>`
+        grid.text(behind ? 2 : cols - label.length - 2, 4, label, "rgba(255,240,180,0.75)")
       }
 
       // Tracer, oldest faintest.
@@ -309,7 +326,7 @@ export default function Golf({ winId }: { winId: string; isMobile: boolean }) {
         // The same speed the swing will produce, lie penalty and all, so the
         // guide is a promise rather than a decoration.
         const v = 46 * meter.current.power * LIE_POWER[lieAt(g.hole, g.ball.x)]
-        const vx = Math.cos(angle) * v
+        const vx = Math.cos(angle) * v * facing(g)
         const vy = Math.sin(angle) * v
         for (let i = 1; i <= 30; i++) {
           const s = i * 0.055

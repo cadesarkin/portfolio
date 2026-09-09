@@ -58,6 +58,7 @@ export class Grid {
   readonly rows: number
   private readonly chars: string[]
   private readonly colors: string[]
+  private readonly backs: string[]
 
   constructor(cols: number, rows: number) {
     this.cols = Math.max(0, Math.floor(cols))
@@ -65,11 +66,13 @@ export class Grid {
     const n = this.cols * this.rows
     this.chars = new Array<string>(n).fill(" ")
     this.colors = new Array<string>(n).fill("")
+    this.backs = new Array<string>(n).fill("")
   }
 
   clear(): void {
     this.chars.fill(" ")
     this.colors.fill("")
+    this.backs.fill("")
   }
 
   inside(c: number, r: number): boolean {
@@ -86,10 +89,32 @@ export class Grid {
     this.colors[i] = color
   }
 
-  at(c: number, r: number): { ch: string; color: string } {
-    if (!this.inside(c, r)) return { ch: " ", color: "" }
+  /**
+   * Sets a cell's background.
+   *
+   * Colour lives behind the glyphs rather than in a gradient painted under the
+   * whole grid: a wash is a smooth shape, and a smooth shape in the middle of a
+   * character scene reads as a different picture pasted in. Filling cells keeps
+   * every edge on the grid.
+   */
+  back(c: number, r: number, color: string): void {
+    const x = Math.round(c)
+    const y = Math.round(r)
+    if (!this.inside(x, y)) return
+    this.backs[y * this.cols + x] = color
+  }
+
+  /** Fills a run of backgrounds in one row, clipped to the grid. */
+  backRow(r: number, from: number, to: number, color: string): void {
+    const lo = Math.max(0, Math.round(Math.min(from, to)))
+    const hi = Math.min(this.cols - 1, Math.round(Math.max(from, to)))
+    for (let c = lo; c <= hi; c++) this.back(c, r, color)
+  }
+
+  at(c: number, r: number): { ch: string; color: string; bg: string } {
+    if (!this.inside(c, r)) return { ch: " ", color: "", bg: "" }
     const i = r * this.cols + c
-    return { ch: this.chars[i], color: this.colors[i] }
+    return { ch: this.chars[i], color: this.colors[i], bg: this.backs[i] }
   }
 
   text(c: number, r: number, s: string, color: string): void {
@@ -164,27 +189,44 @@ export class Grid {
     ctx.font = m.font
     ctx.textBaseline = "top"
     for (let r = 0; r < this.rows; r++) {
+      const y = r * m.ch
+      const base = r * this.cols
+
+      // Backgrounds first, as run-length spans, so a blank cell reads as sky
+      // or soil rather than as a hole. The +1s close the seams between spans.
+      let c = 0
+      while (c < this.cols) {
+        const bg = this.backs[base + c]
+        let end = c + 1
+        while (end < this.cols && this.backs[base + end] === bg) end++
+        if (bg !== "") {
+          ctx.fillStyle = bg
+          ctx.fillRect(c * m.cw, y, (end - c) * m.cw + 1, m.ch + 1)
+        }
+        c = end
+      }
+
+      // Then the glyphs, batched into same-colour runs.
       let run = ""
       let runStart = 0
       let runColor = ""
       const flush = () => {
         if (run.trim() !== "") {
           ctx.fillStyle = runColor
-          ctx.fillText(run, runStart * m.cw, r * m.ch)
+          ctx.fillText(run, runStart * m.cw, y)
         }
         run = ""
       }
-      for (let c = 0; c < this.cols; c++) {
-        const i = r * this.cols + c
-        const ch = this.chars[i]
-        const color = this.colors[i]
+      for (let gc = 0; gc < this.cols; gc++) {
+        const ch = this.chars[base + gc]
+        const color = this.colors[base + gc]
         if (ch === " ") {
           flush()
           continue
         }
         if (run === "" || color !== runColor) {
           flush()
-          runStart = c
+          runStart = gc
           runColor = color
         }
         run += ch
