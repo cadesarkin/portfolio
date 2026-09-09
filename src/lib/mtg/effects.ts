@@ -163,7 +163,7 @@ export function damagePlayer(state: GameState, playerId: PlayerId, amount: numbe
   if (amount <= 0) return
   const player = state.players[playerId]
   player.life -= amount
-  log(state, `${subject(player.name, "take")} ${amount} — ${player.life} life`)
+  log(state, `${subject(player.name, "take")} ${amount} — ${player.life} left`)
 }
 
 export function dealDamageToCard(state: GameState, card: GameCard, amount: number): void {
@@ -208,7 +208,7 @@ export function applyEffect(ctx: EffectContext, effect: Effect): void {
       const n = amountOf(ctx, effect.amount)
       for (const p of playersFor(ctx, effect.who)) {
         state.players[p].life += n
-        log(state, `${subject(state.players[p].name, "gain")} ${n} life`)
+        log(state, `${subject(state.players[p].name, "gain")} ${n} — ${state.players[p].life} left`)
       }
       break
     }

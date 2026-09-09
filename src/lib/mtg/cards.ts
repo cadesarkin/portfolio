@@ -10,6 +10,7 @@
 
 import raw from "../mtg-data.json"
 import { encodedFor } from "./encoded"
+import { KERNEL_CARDS, kernelDeckList } from "./sets/kernel"
 import { autoEncode } from "./encoded/auto"
 import {
   KEYWORDS,
@@ -200,7 +201,16 @@ function build(c: RawCard): CardDef {
 
 const CACHE = new Map<string, CardDef>()
 
+/**
+ * A card by name, from whichever set it belongs to.
+ *
+ * The engine does not care where a definition came from, which is the whole
+ * reason a set of our own was cheap to add: the rules, the stack and combat are
+ * the expensive part and they are already written.
+ */
 export function cardDef(name: string): CardDef | undefined {
+  const ours = KERNEL_CARDS[name]
+  if (ours) return ours
   const cached = CACHE.get(name)
   if (cached) return cached
   const rawCard = DATA.cards[name]
@@ -217,8 +227,15 @@ export function allDefs(): CardDef[] {
   return ALL_CARD_NAMES.map((n) => cardDef(n)!).filter(Boolean)
 }
 
-/** The full 100-card list for a deck, commander first. */
+/**
+ * A deck by id, from either set.
+ *
+ * Our own decks have no commander, so the first card of the list stands in for
+ * one: the command zone simply stays empty, since nothing puts a card there.
+ */
 export function deckList(deckId: string): { commander: string; cards: string[] } | undefined {
+  const ours = kernelDeckList(deckId)
+  if (ours) return { commander: "", cards: ours }
   const deck = DECKS.find((d) => d.id === deckId)
   if (!deck) return undefined
   const cards: string[] = []

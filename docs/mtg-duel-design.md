@@ -138,8 +138,31 @@ Things that were wrong first and are worth not re-breaking:
 - **The player is called "you", which is second person.** Every log line built
   as `${name} ${verb}s` came out as "you takes 6".
 
-## Fallback
+## KERNEL: a set of our own
 
-If the encoded coverage stays too thin to be fun, the fallback is the curated
-version: three 40-card decks drawn from the cards that encode cleanly. The
-engine is identical either way — only the decklists change.
+The coverage above is the honest ceiling of encoding somebody else's card game.
+Each of the four systems still missing — replacement effects, cost modification,
+cheating permanents into play, granted activated abilities — is a week of work
+that unlocks about six cards and adds permanent complexity to an engine that is
+currently clean.
+
+So there is a second set, `sets/kernel.ts`, designed the other way round: the
+cards are written against the vocabulary the engine already has, so nothing
+needs approximating. Every one of them comes out `encoded: "full"`, and a test
+fails if that ever stops being true. A second test plays whole games and asserts
+that no line of the log is ever marked unimplemented.
+
+This cost almost nothing to add, which is the point worth remembering: the
+engine never knew what a card was. Turns, the stack, priority, combat,
+triggers, attachments, state-based actions and mana are all deck-agnostic, so a
+new set is data, not code.
+
+The theme is the machine the desktop pretends to be — processes, volumes,
+daemons, uptime. The engine is untouched by it: its colours are still WUBRG and
+its keywords are still `flying` and `trample`, and `flavour.ts` renames them at
+the edge. That is what stops the blocking rules needing to know that flying is
+called "kernel" now.
+
+Both sets are offered on the same table. The real decks stay, because a duel
+against the actual hundred-card lists is an honest artifact even where it is
+incomplete, and it costs nothing to keep.

@@ -36,7 +36,13 @@ import {
   runUntilPlayer,
   type Waiting,
 } from "@/lib/mtg/duel"
+import { KERNEL_DECKS } from "@/lib/mtg/sets/kernel"
+import { keywordName, lifeName, typeLine, type Flavour } from "@/lib/mtg/flavour"
 import type { GameCard, GameState, Pool } from "@/lib/mtg/types"
+
+const KERNEL_IDS = KERNEL_DECKS.map((d) => d.id)
+const flavourOf = (deckId: string): Flavour =>
+  KERNEL_IDS.includes(deckId) ? "kernel" : "mtg"
 
 /** Colour by how much of a card's text the engine runs. */
 const ENCODED_MARK: Record<string, { label: string; colour: string } | null> = {
@@ -47,6 +53,8 @@ const ENCODED_MARK: Record<string, { label: string; colour: string } | null> = {
 }
 
 const deckName = (id: string): string => {
+  const ours = KERNEL_DECKS.find((d) => d.id === id)
+  if (ours) return ours.name
   const deck = DECKS.find((d) => d.id === id)
   if (!deck) return id
   return (cardDef(deck.commander)?.name ?? deck.commander).split(",")[0]
@@ -72,8 +80,14 @@ export default function Duel({ winId }: { winId: string }) {
   const seed = useRef(Math.floor(Math.random() * 100000))
 
   const start = useCallback((mine: string) => {
-    const theirs = DECKS.find((d) => d.id !== mine)?.id ?? mine
-    const g = createGame(mine, theirs, ["you", "opponent"], { seed: seed.current })
+    const ours = KERNEL_IDS.includes(mine)
+    const pool = ours ? KERNEL_IDS : DECKS.map((d) => d.id)
+    const theirs = pool.find((id) => id !== mine) ?? mine
+    const g = createGame(mine, theirs, ["you", "opponent"], {
+      seed: seed.current,
+      // A forty-card duel is a shorter game than a hundred-card Commander one.
+      life: ours ? 20 : 40,
+    })
     setWaiting(runUntilPlayer(g))
     setState(g)
     setAttackers([])
@@ -130,6 +144,7 @@ export default function Duel({ winId }: { winId: string }) {
 
   const me = state.players[HUMAN]
   const them = state.players[AI]
+  const flavour = flavourOf(me.deckId)
   const cards = (ids: number[]): GameCard[] =>
     ids.map((id) => state.cards[id]).filter(Boolean)
 
@@ -240,6 +255,7 @@ export default function Duel({ winId }: { winId: string }) {
           hand={them.hand.length}
           library={them.library.length}
           align="top"
+          lifeLabel={lifeName(flavour)}
           zones={{
             graveyard: them.graveyard.length,
             exile: them.exile.length,
@@ -249,6 +265,7 @@ export default function Duel({ winId }: { winId: string }) {
         <Battlefield
           state={state}
           cards={cards(them.battlefield)}
+          flavour={flavour}
           onClick={(c) => {
             if (picking !== null) return castAt(c)
             if (waiting.for === "player-blockers" && c.attacking) {
@@ -313,6 +330,7 @@ export default function Duel({ winId }: { winId: string }) {
         <Battlefield
           state={state}
           cards={cards(me.battlefield)}
+          flavour={flavour}
           onClick={(c) => {
             if (equipping !== null) return doEquip(c)
             if (picking !== null) return castAt(c)
@@ -348,6 +366,7 @@ export default function Duel({ winId }: { winId: string }) {
           hand={me.hand.length}
           library={me.library.length}
           align="bottom"
+          lifeLabel={lifeName(flavour)}
           pool={me.pool}
           zones={{
             graveyard: me.graveyard.length,
@@ -379,6 +398,7 @@ export default function Duel({ winId }: { winId: string }) {
                 disabled={refusal !== null}
                 reason={refusal}
                 selected={picking === card.id}
+                flavour={flavour}
                 onClick={() => playFromHand(card)}
                 onInspect={() => setInspect(card)}
               />
@@ -391,6 +411,7 @@ export default function Duel({ winId }: { winId: string }) {
               disabled={canCast(state, card.id) !== null}
               reason={canCast(state, card.id)}
               selected={picking === card.id}
+              flavour={flavour}
               commander
               onClick={() => playFromHand(card)}
               onInspect={() => setInspect(card)}
@@ -569,23 +590,60 @@ function DeckPicker({ onPick }: { onPick: (id: string) => void }) {
         height: "100%",
         background: "#0b0714",
         color: "#e4e0ee",
+        overflowY: "auto",
       }}
     >
-      <div style={{ textAlign: "center", maxWidth: 520, padding: 20 }}>
-        <div style={{ fontSize: 20, letterSpacing: "0.06em", marginBottom: 6 }}>a duel</div>
-        <p style={{ fontSize: 12, color: "#9c92b8", lineHeight: 1.6, marginBottom: 18 }}>
-          Pick a deck. The opponent plays another. Real turns, real combat, and the
-          real hundred-card lists — every card is here, with its printed body and
-          keywords. Cards whose rules text the engine does not run are marked, and
-          the log says so when one of them does nothing.
-        </p>
-        <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-          {DECKS.map((d) => (
-            <button key={d.id} type="button" className="seg on-dark" onClick={() => onPick(d.id)}>
-              {deckName(d.id)}
-            </button>
-          ))}
+      <div style={{ maxWidth: 620, padding: 24 }}>
+        <div style={{ fontSize: 20, letterSpacing: "0.06em", marginBottom: 16, textAlign: "center" }}>
+          a duel
         </div>
+
+        <section style={{ marginBottom: 22 }}>
+          <h3 style={{ fontSize: 12, letterSpacing: "0.14em", color: "#cbb8f0", margin: "0 0 4px" }}>
+            KERNEL
+          </h3>
+          <p style={{ fontSize: 11.5, color: "#9c92b8", lineHeight: 1.6, margin: "0 0 10px" }}>
+            A set built for this engine, so every card does exactly what it says.
+            Two processes fight for a machine: creatures are processes, lands are
+            volumes, life is uptime. Forty cards, twenty uptime.
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {KERNEL_DECKS.map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                className="seg on-dark"
+                onClick={() => onPick(d.id)}
+                title={d.blurb}
+                style={{ flexDirection: "column" }}
+              >
+                {d.name}
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize: 10.5, color: "#6f6688", marginTop: 6 }}>
+            {KERNEL_DECKS.map((d) => `${d.name}: ${d.blurb}`).join(" · ")}
+          </div>
+        </section>
+
+        <section>
+          <h3 style={{ fontSize: 12, letterSpacing: "0.14em", color: "#d8b25e", margin: "0 0 4px" }}>
+            YOUR COMMANDER DECKS
+          </h3>
+          <p style={{ fontSize: 11.5, color: "#9c92b8", lineHeight: 1.6, margin: "0 0 10px" }}>
+            The real hundred-card lists. Every card is here with its printed body
+            and keywords, but roughly a third of the rules text is more than this
+            engine runs — those cards are marked, and the log says so when one of
+            them does nothing.
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {DECKS.map((d) => (
+              <button key={d.id} type="button" className="seg on-dark" onClick={() => onPick(d.id)}>
+                {deckName(d.id)}
+              </button>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   )
@@ -597,6 +655,7 @@ function PlayerBar({
   hand,
   library,
   align,
+  lifeLabel,
   pool,
   zones,
   onZone,
@@ -606,6 +665,7 @@ function PlayerBar({
   hand: number
   library: number
   align: "top" | "bottom"
+  lifeLabel: string
   pool?: Pool
   zones?: { graveyard: number; exile: number; command: number }
   onZone?: (z: "graveyard" | "exile") => void
@@ -628,7 +688,9 @@ function PlayerBar({
       }}
     >
       <span style={{ color: "#e4e0ee" }}>{name}</span>
-      <span style={{ color: life <= 10 ? "#e07a63" : "#8fe0a0", fontWeight: 700 }}>{life} life</span>
+      <span style={{ color: life <= 10 ? "#e07a63" : "#8fe0a0", fontWeight: 700 }}>
+        {life} {lifeLabel}
+      </span>
       <span>{hand} hand</span>
       <span>{library} library</span>
       {zones && (
@@ -686,6 +748,7 @@ function Battlefield({
   onClick,
   highlight,
   badge,
+  flavour,
   onHover,
   onInspect,
 }: {
@@ -694,6 +757,7 @@ function Battlefield({
   onClick: (c: GameCard) => void
   highlight: (c: GameCard) => string | null
   badge?: (c: GameCard) => string | null
+  flavour: Flavour
   onHover?: (id: number | null) => void
   onInspect: (c: GameCard) => void
 }) {
@@ -701,8 +765,8 @@ function Battlefield({
   const rest = cards.filter((c) => !c.def.types.includes("Land"))
   return (
     <div style={{ flex: "1 1 auto", minHeight: 96, padding: "6px 10px", overflowY: "auto" }}>
-      <Row cards={rest} state={state} onClick={onClick} highlight={highlight} badge={badge} onHover={onHover} onInspect={onInspect} />
-      <Row cards={lands} state={state} onClick={onClick} highlight={highlight} onHover={onHover} onInspect={onInspect} small />
+      <Row cards={rest} state={state} onClick={onClick} highlight={highlight} badge={badge} flavour={flavour} onHover={onHover} onInspect={onInspect} />
+      <Row cards={lands} state={state} onClick={onClick} highlight={highlight} flavour={flavour} onHover={onHover} onInspect={onInspect} small />
     </div>
   )
 }
@@ -713,6 +777,7 @@ function Row({
   onClick,
   highlight,
   badge,
+  flavour,
   onHover,
   onInspect,
   small,
@@ -722,6 +787,7 @@ function Row({
   onClick: (c: GameCard) => void
   highlight: (c: GameCard) => string | null
   badge?: (c: GameCard) => string | null
+  flavour: Flavour
   onHover?: (id: number | null) => void
   onInspect: (c: GameCard) => void
   small?: boolean
@@ -737,6 +803,7 @@ function Row({
           small={small}
           outline={highlight(c)}
           badge={badge?.(c) ?? null}
+          flavour={flavour}
           onClick={() => onClick(c)}
           onHover={onHover}
           onInspect={() => onInspect(c)}
@@ -752,6 +819,7 @@ function Permanent({
   small,
   outline,
   badge,
+  flavour,
   onHover,
   onClick,
   onInspect,
@@ -761,6 +829,7 @@ function Permanent({
   small?: boolean
   outline: string | null
   badge?: string | null
+  flavour: Flavour
   onHover?: (id: number | null) => void
   onClick: () => void
   onInspect: () => void
@@ -817,7 +886,7 @@ function Permanent({
       </div>
       {kws.length > 0 && (
         <div style={{ fontSize: 8, color: "#9c92b8", marginTop: 1, lineHeight: 1.2 }}>
-          {kws.slice(0, 3).join(" ")}
+          {kws.slice(0, 3).map((k) => keywordName(k, flavour)).join(" ")}
         </div>
       )}
       {badge && (
@@ -841,6 +910,7 @@ function HandCard({
   disabled,
   reason,
   selected,
+  flavour,
   commander,
   onClick,
   onInspect,
@@ -849,6 +919,7 @@ function HandCard({
   disabled: boolean
   reason: string | null
   selected: boolean
+  flavour: Flavour
   commander?: boolean
   onClick: () => void
   onInspect: () => void
@@ -893,7 +964,7 @@ function HandCard({
         <Cost cost={card.def.cost} />
       </div>
       <div style={{ fontSize: 8.5, color: "#7d749a", marginTop: 3 }}>
-        {card.def.types.join(" ")}
+        {typeLine(card.def.types, flavour)}
         {card.def.power !== null && ` ${card.def.power}/${card.def.toughness}`}
       </div>
       {mark && <div style={{ fontSize: 8, color: mark.colour, marginTop: 1 }}>{mark.label}</div>}

@@ -62,11 +62,11 @@ function newCard(id: number, def: CardDef, owner: PlayerId, zone: Zone): GameCar
   }
 }
 
-function emptyPlayer(id: PlayerId, name: string, deckId: string): Player {
+function emptyPlayer(id: PlayerId, name: string, deckId: string, life = STARTING_LIFE): Player {
   return {
     id,
     name,
-    life: STARTING_LIFE,
+    life,
     library: [],
     hand: [],
     battlefield: [],
@@ -84,6 +84,8 @@ export interface NewGameOptions {
   seed?: number
   /** Skip the opening draw, for tests that want an empty hand. */
   skipOpeningHand?: boolean
+  /** Starting life. Commander is 40; a 40-card duel is shorter at 20. */
+  life?: number
 }
 
 /**
@@ -102,9 +104,10 @@ export function createGame(
   const seed = options.seed ?? 12345
   const random = rng(seed)
 
+  const life = options.life ?? STARTING_LIFE
   const state: GameState = {
     cards: {},
-    players: [emptyPlayer(0, names[0], deckA), emptyPlayer(1, names[1], deckB)],
+    players: [emptyPlayer(0, names[0], deckA, life), emptyPlayer(1, names[1], deckB, life)],
     active: 0,
     priority: 0,
     phase: "main1",
@@ -122,7 +125,7 @@ export function createGame(
     if (!list) return
     const player = state.players[owner]
 
-    const commanderDef = cardDef(list.commander)
+    const commanderDef = list.commander ? cardDef(list.commander) : undefined
     if (commanderDef) {
       const card = newCard(state.nextId++, commanderDef, owner, "command")
       state.cards[card.id] = card
