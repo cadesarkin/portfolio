@@ -142,6 +142,11 @@ export default function Minesweeper({ isMobile }: { isMobile: boolean }) {
         style={{
           display: "grid",
           gridTemplateColumns: `repeat(${W}, 1fr)`,
+          // Explicit rows. Without these the rows are auto-sized by content,
+          // so a row holding a number gets a text line box and grows while
+          // all-blank rows shrink — the board visibly resizes as you uncover
+          // numbers.
+          gridTemplateRows: `repeat(${H}, 1fr)`,
           gap: 1,
           // Sized from the grid so expert (30x16) stays square-celled and
           // fits the window instead of stretching.
