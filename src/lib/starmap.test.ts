@@ -26,11 +26,10 @@ describe("worlds", () => {
     }
   })
 
-  it("gives every world a name, a blurb and a scene", () => {
+  it("gives every world a name and a blurb", () => {
     for (const w of WORLDS) {
       expect(w.name).toBeTruthy()
       expect(w.blurb).toBeTruthy()
-      expect(w.scene).toBeTruthy()
     }
   })
 

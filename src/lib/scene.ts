@@ -50,7 +50,7 @@ function hash(x: number, y: number): number {
   return (h >>> 0) / 4294967295
 }
 
-function vnoise(x: number, y: number): number {
+export function vnoise(x: number, y: number): number {
   const xi = Math.floor(x)
   const yi = Math.floor(y)
   const xf = x - xi
@@ -68,107 +68,69 @@ const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n)
 const ramp = (chars: string, t: number) =>
   chars.charAt(Math.round(clamp01(t) * (chars.length - 1)))
 
-/** A links course: fairway, bunkers, a flag on the horizon. */
-const links: Scene = {
-  background: "#0e2a1c",
-  shade: (x, y, t) => {
-    const horizon = 0.42
-    if (y < horizon) {
-      // Overcast coastal sky.
-      const k = y / horizon
-      const cloud = vnoise(x * 5 - t * 0.06, y * 7)
-      const v = 0.25 + k * 0.4 + cloud * 0.2
-      return {
-        ch: ramp(" .:-=+*", 1 - v),
-        color: `rgb(${120 + v * 90 | 0}, ${140 + v * 80 | 0}, ${150 + v * 70 | 0})`,
-      }
-    }
-    const d = (y - horizon) / (1 - horizon)
-    const roll = vnoise(x * 3.2, y * 2.4 + 4) * 0.5 + vnoise(x * 9 - t * 0.1, y * 6) * 0.2
-    // Bunkers: pale patches scattered across the fairway.
-    const sand = vnoise(x * 4.5 + 11, y * 5 + 3)
-    const isSand = sand > 0.62 && d > 0.2
-    const lum = clamp01(0.35 + roll * 0.7 + d * 0.25)
-
-    if (isSand) {
-      return { ch: ramp(" .:-~", lum), color: `rgb(214, 198, 150)` }
-    }
-    return {
-      ch: ramp(" .,:ivwW", 1 - lum * 0.7),
-      color: `rgb(${40 + lum * 60 | 0}, ${110 + lum * 90 | 0}, ${50 + lum * 50 | 0})`,
-    }
-  },
-}
-
-/** A bowling lane running away into the dark. */
-const lanes: Scene = {
-  background: "#120d08",
-  shade: (x, y, t) => {
-    // The lane narrows toward a vanishing point.
-    const vanish = 0.18
-    const depth = clamp01((y - vanish) / (1 - vanish))
-    const halfWidth = 0.04 + depth * 0.34
-    const off = Math.abs(x - 0.5)
-
-    if (y < vanish) {
-      // The rack, seen end on: a triangle widening toward the viewer.
-      const k = (y - vanish * 0.35) / (vanish * 0.65)
-      const pin = k > 0 && Math.abs(x - 0.5) < 0.012 + k * 0.052
-      return pin
-        ? { ch: ramp(" .oO0", 0.75 + k * 0.25), color: "#f1e6d2" }
-        : { ch: " ", color: "#000" }
-    }
-
-    if (off > halfWidth + 0.09) {
-      return { ch: " ", color: "#000" }
-    }
-    if (off > halfWidth) {
-      // Gutters.
-      return { ch: ramp(" .:-", 0.6), color: "#3a2c1e" }
-    }
-
-    // Polished boards, with the grain running to the vanishing point.
-    const board = Math.floor(((x - 0.5) / halfWidth) * 20)
-    const grain = vnoise(board * 3.1, y * 14 - t * 0.4)
-    const sheen = Math.exp(-Math.pow((off / halfWidth - 0.15) / 0.4, 2)) * 0.5
-    const lum = clamp01(0.35 + grain * 0.3 + sheen + depth * 0.1)
-    return {
-      ch: ramp(" .:=|", board % 4 === 0 ? 0.85 : lum * 0.6),
-      color: `rgb(${150 + lum * 90 | 0}, ${110 + lum * 80 | 0}, ${60 + lum * 60 | 0})`,
-    }
-  },
-}
-
-/** A library of spells, sorted by colour. */
+/**
+ * A library of spells, sorted by colour.
+ *
+ * Shelves of spines in the five mana colours, with motes of dust drifting up
+ * through the lamplight. This is the one scene a program does not paint over,
+ * so it is the one that has to hold up behind panels: the palette stays dark
+ * and low-contrast, and the light is concentrated in a few places rather than
+ * spread evenly, so text laid over it still reads.
+ */
 const arcanum: Scene = {
   background: "#0b0714",
   shade: (x, y, t) => {
-    // Five mana colours, drifting as slow vertical bands.
-    const MANA = [
-      [235, 232, 210], // white
-      [90, 140, 220], // blue
-      [70, 60, 80], // black
-      [210, 90, 70], // red
-      [110, 180, 110], // green
+    const MANA: [number, number, number][] = [
+      [232, 228, 206], // white
+      [86, 136, 214], // blue
+      [96, 84, 108], // black
+      [206, 88, 70], // red
+      [104, 176, 106], // green
     ]
-    const band = vnoise(x * 2.6 + t * 0.05, y * 1.6)
-    const idx = Math.min(4, Math.floor(band * 5))
-    const [r, g, b] = MANA[idx]
 
-    // Shelves: horizontal rows of spines.
-    const shelf = Math.abs(((y * 14) % 1) - 0.5)
-    const spine = vnoise(x * 60, Math.floor(y * 14) * 7)
-    const onShelf = shelf > 0.18
-
-    if (!onShelf) {
-      return { ch: ramp(" .-=", 0.5), color: "#241a38" }
+    // Dust, drifting up through the room and twinkling as it goes.
+    const mx = Math.floor(x * 190)
+    const my = Math.floor((y + t * 0.014) * 96)
+    const mote = hash01(mx, my)
+    if (mote > 0.9976) {
+      const v = 0.5 + 0.5 * Math.sin(t * 3 + mote * 400)
+      return { ch: v > 0.6 ? "'" : ".", color: `rgba(214, 196, 255, ${(0.25 + v * 0.5).toFixed(2)})` }
     }
-    const lum = clamp01(0.3 + spine * 0.8)
+
+    // Lamps set along the shelves; everything is lit relative to them.
+    const lamp =
+      Math.exp(-Math.pow((x - 0.18) / 0.16, 2)) * (0.5 + 0.16 * Math.sin(t * 1.7)) +
+      Math.exp(-Math.pow((x - 0.78) / 0.19, 2)) * (0.45 + 0.14 * Math.sin(t * 1.1 + 2))
+
+    const ROW = 0.155
+    const row = Math.floor(y / ROW)
+    const within = (y - row * ROW) / ROW
+
+    // The plank each row of books stands on.
+    if (within > 0.88) {
+      const g = clamp01(0.16 + lamp * 0.5)
+      return { ch: "=", color: `rgb(${(58 + g * 90) | 0}, ${(44 + g * 66) | 0}, ${(78 + g * 84) | 0})` }
+    }
+
+    // One book per column of the shelf, each its own height and colour.
+    const book = Math.floor(x * 74)
+    const height = 0.34 + hash01(book, row * 37) * 0.5
+    if (within < 0.88 - height) {
+      // Air above the books, falling away into the dark at the back.
+      const gloom = clamp01(0.06 + lamp * 0.22)
+      return { ch: gloom > 0.16 ? "." : " ", color: `rgba(52, 40, 76, ${gloom.toFixed(2)})` }
+    }
+
+    const [r, g, b] = MANA[Math.floor(hash01(book + 11, row * 19) * 5) % 5]
+    // Gilt on roughly one spine in seven.
+    const gilt = hash01(book + 3, row * 53) > 0.86
+    const lum = clamp01(0.2 + lamp * 0.62 + hash01(book, row) * 0.16)
+    const k = 0.22 + lum * 0.52
     return {
-      ch: ramp(" .:|IH", lum),
-      color: `rgb(${r * (0.35 + lum * 0.65) | 0}, ${g * (0.35 + lum * 0.65) | 0}, ${
-        b * (0.35 + lum * 0.65) | 0
-      })`,
+      ch: gilt ? ramp("|IHM", lum) : ramp("|:|I", lum),
+      color: gilt
+        ? `rgb(${(198 * k) | 0}, ${(168 * k) | 0}, ${(96 * k) | 0})`
+        : `rgb(${(r * k) | 0}, ${(g * k) | 0}, ${(b * k) | 0})`,
     }
   },
 }
@@ -201,8 +163,6 @@ const voidScene: Scene = {
 }
 
 export const SCENES: Record<SceneId, Scene> = {
-  links,
-  lanes,
   arcanum,
   void: voidScene,
 }

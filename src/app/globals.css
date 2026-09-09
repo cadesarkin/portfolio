@@ -523,3 +523,29 @@ a:hover {
   outline: 1px solid var(--accent);
   outline-offset: 1px;
 }
+
+/*
+ * The same control on a world's dark scene.
+ *
+ * The plain .seg draws itself from the desktop's window tokens, which are lit
+ * for a light window chrome; over a world it came out as a dark box with dark
+ * text in it. These colours are fixed rather than tokenised because a world's
+ * backdrop is its own, not the desktop theme's.
+ */
+.seg.on-dark {
+  color: rgba(226, 232, 240, 0.72);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.seg.on-dark:hover:not(:disabled) {
+  color: #f4f6fb;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
+.seg.on-dark[data-active] {
+  color: #14101f;
+  background: #cbb8f0;
+  border-color: #cbb8f0;
+}

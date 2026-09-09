@@ -8,12 +8,15 @@ import {
   setCourse,
   stepShip,
   heading,
-  shipGlyph,
+  shipSprite,
   worldById,
   distanceRemaining,
   type Ship,
 } from "@/lib/starmap"
 import { sceneFor } from "@/lib/scene"
+import Arcanum from "./worlds/Arcanum"
+import Bowling from "./worlds/Bowling"
+import Golf from "./worlds/Golf"
 
 /** Character cell for the scene canvas. */
 const CELL = 9
@@ -73,6 +76,7 @@ export default function Starmap({
   return view === "surface" && landedWorld ? (
     <Surface
       world={landedWorld}
+      winId={winId}
       isMobile={isMobile}
       onLeave={() => setView("map")}
     />
@@ -162,6 +166,11 @@ function Map({
 
   const target = ship.target ? worldById(ship.target) : undefined
 
+  /* The exhaust flickers off the ship's own position: the map re-renders on
+     every flight tick anyway, so this needs no clock of its own. */
+  const flicker = target ? ["*", "+", "x"][Math.floor((ship.x + ship.y) * 190) % 3] : "*"
+  const shipArt = shipSprite(heading(ship)).map((row) => row.split("*").join(flicker))
+
   return (
     <div
       style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}
@@ -236,32 +245,71 @@ function Map({
                 textShadow: "0 1px 4px rgba(0,0,0,0.9)",
               }}
             >
-              <span aria-hidden="true" style={{ fontSize: 18, lineHeight: 1 }}>
-                {here ? "◉" : "○"}
-              </span>
+              <pre
+                aria-hidden="true"
+                style={{
+                  margin: 0,
+                  font: "inherit",
+                  fontSize: isMobile ? 12 : 17,
+                  lineHeight: 1,
+                  whiteSpace: "pre",
+                  color: w.colour,
+                  opacity: here || selected === i ? 1 : 0.62,
+                  filter: here ? `drop-shadow(0 0 6px ${w.colour})` : undefined,
+                }}
+              >
+                {w.art.join("\n")}
+              </pre>
               <span>{w.name}</span>
             </button>
           )
         })}
 
+        {/* The plotted course, drawn ahead of the ship. */}
+        {target &&
+          Array.from({ length: 16 }, (_, i) => {
+            const k = (i + 1) / 17
+            return (
+              <span
+                key={i}
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  left: `${(ship.x + (target.x - ship.x) * k) * 100}%`,
+                  top: `${(ship.y + (target.y - ship.y) * k) * 100}%`,
+                  transform: "translate(-50%, -50%)",
+                  fontSize: 10,
+                  lineHeight: 1,
+                  color: `rgba(255, 209, 102, ${(0.34 * (1 - k) + 0.06).toFixed(2)})`,
+                  pointerEvents: "none",
+                }}
+              >
+                .
+              </span>
+            )
+          })}
+
         {/* The ship. */}
-        <span
+        <pre
           aria-hidden="true"
           style={{
             position: "absolute",
             left: `${ship.x * 100}%`,
             top: `${ship.y * 100}%`,
             transform: "translate(-50%, -50%)",
-            fontSize: 20,
+            margin: 0,
+            font: "inherit",
+            fontSize: isMobile ? 11 : 15,
             lineHeight: 1,
+            whiteSpace: "pre",
             color: "#ffd166",
-            textShadow: "0 0 8px rgba(255,209,102,0.8)",
+            textShadow: "0 0 7px rgba(255,209,102,0.55)",
             transition: "left 60ms linear, top 60ms linear",
             pointerEvents: "none",
           }}
         >
-          {shipGlyph(heading(ship))}
-        </span>
+          {shipArt.join("\n")}
+        </pre>
       </div>
 
       <div
@@ -287,10 +335,12 @@ function Map({
 
 function Surface({
   world,
+  winId,
   isMobile,
   onLeave,
 }: {
   world: (typeof WORLDS)[number]
+  winId: string
   isMobile: boolean
   onLeave: () => void
 }) {
@@ -303,6 +353,7 @@ function Surface({
     const ctx = canvas?.getContext("2d")
     if (!canvas || !wrap || !ctx) return
 
+    if (!world.scene) return
     const scene = sceneFor(world.scene)
     let raf = 0
     let t = 0
@@ -372,42 +423,45 @@ function Surface({
       </div>
 
       <div ref={wrapRef} style={{ position: "relative", flex: "1 1 auto", minHeight: 220 }}>
-        <canvas
-          ref={canvasRef}
-          aria-label={`${world.name} surface`}
-          style={{ position: "absolute", inset: 0, display: "block" }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            display: "grid",
-            placeItems: "center",
-            pointerEvents: "none",
-          }}
-        >
-          <div
-            style={{
-              padding: "14px 20px",
-              background: "rgba(6, 12, 24, 0.72)",
-              border: "1px solid rgba(160,200,255,0.28)",
-              color: "#dbe9f5",
-              fontSize: isMobile ? 12 : 13,
-              textAlign: "center",
-              maxWidth: "42ch",
-              lineHeight: 1.6,
-            }}
-          >
-            <div style={{ letterSpacing: "0.18em", fontSize: 11, opacity: 0.7 }}>
-              SURVEY COMPLETE
-            </div>
-            <div style={{ marginTop: 8 }}>
-              Nothing installed here yet. This is where{" "}
-              <strong>{world.app}</strong> will run.
-            </div>
-          </div>
+        {/*
+          The backdrop, for worlds that have one. Golf and bowling draw their
+          own ASCII view over every pixel of this box, so they get no scene and
+          no second canvas underneath it.
+        */}
+        {world.scene && (
+          <canvas
+            ref={canvasRef}
+            aria-label={`${world.name} surface`}
+            style={{ position: "absolute", inset: 0, display: "block" }}
+          />
+        )}
+        <div style={{ position: "absolute", inset: 0 }}>
+          <WorldApp world={world} winId={winId} isMobile={isMobile} />
         </div>
       </div>
     </div>
   )
+}
+
+/* ── The programs that run on each world ─────────────────────────────── */
+
+function WorldApp({
+  world,
+  winId,
+  isMobile,
+}: {
+  world: (typeof WORLDS)[number]
+  winId: string
+  isMobile: boolean
+}) {
+  switch (world.app) {
+    case "golf":
+      return <Golf winId={winId} isMobile={isMobile} />
+    case "bowling":
+      return <Bowling winId={winId} isMobile={isMobile} />
+    case "decks":
+      return <Arcanum />
+    default:
+      return null
+  }
 }
