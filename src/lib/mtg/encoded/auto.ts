@@ -12,7 +12,7 @@
  * none of a sentence than half of it — half a card is a card that lies.
  */
 
-import type { Ability, Effect, Keyword, ManaSymbol, TokenSpec } from "../types"
+import type { Ability, Effect, Keyword, ManaOption, ManaSymbol, TokenSpec } from "../types"
 import { KEYWORDS } from "../types"
 
 export interface AutoEncoded {
@@ -104,18 +104,28 @@ function parseToken(text: string): { count: number; token: TokenSpec } | null {
 }
 
 /**
- * Mana symbols in `Add {G}{G}`, or `Add {R} or {W}`.
+ * The mana in `Add {G}{G}`, or `Add {R} or {W}`.
  *
- * A dual land's "or" is the single most common line in these decks after
- * entering tapped: 25 of them across the three lists. Both forms come out as
- * the set of symbols the land can make, since the engine picks which when it
- * taps rather than at parse time.
+ * The two forms mean different things and the difference matters: `{G}{G}` is
+ * two mana, `{R} or {W}` is one mana with a choice. Each entry of the result is
+ * one mana and lists the symbols it may be taken as.
  */
-function parseAdd(text: string): ManaSymbol[] | null {
-  if (/^add one mana of any color$/i.test(text)) return ["W", "U", "B", "R", "G"]
-  const m = /^add ((?:\{[WUBRGC]\})+(?:\s*,?\s*or\s*(?:\{[WUBRGC]\})+)*)$/i.exec(text)
+function parseAdd(text: string): ManaOption[] | null {
+  if (/^add one mana of any color$/i.test(text)) return [["W", "U", "B", "R", "G"]]
+
+  // "Add {R} or {W}" — a single mana, either colour.
+  const choice = /^add (\{[WUBRGC]\})(?:,? or (\{[WUBRGC]\}))+$/i.exec(text)
+  if (choice || / or /i.test(text)) {
+    const symbols = [...text.matchAll(/\{([WUBRGC])\}/gi)].map(
+      (x) => x[1].toUpperCase() as ManaSymbol
+    )
+    return symbols.length ? [symbols] : null
+  }
+
+  // "Add {G}{G}" — one mana per symbol.
+  const m = /^add ((?:\{[WUBRGC]\})+)$/i.exec(text)
   if (!m) return null
-  return [...m[1].matchAll(/\{([WUBRGC])\}/gi)].map((x) => x[1].toUpperCase() as ManaSymbol)
+  return [...m[1].matchAll(/\{([WUBRGC])\}/gi)].map((x) => [x[1].toUpperCase() as ManaSymbol])
 }
 
 /**

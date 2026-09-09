@@ -119,7 +119,8 @@ function derivedManaAbilities(c: RawCard, types: string[]): Ability[] {
   // A creature that taps for mana needs its ability encoded with the right
   // cost; only lands and artifacts get one for nothing.
   if (types.includes("Creature")) return []
-  return [{ kind: "mana", cost: { tap: true }, produces }]
+  // One mana, of any colour the card is printed as making.
+  return [{ kind: "mana", cost: { tap: true }, produces: [produces] }]
 }
 
 /**
@@ -149,7 +150,11 @@ function build(c: RawCard): CardDef {
   let attach: Attachment | undefined
 
   if (hand) {
-    abilities = [...derived, ...hand.abilities]
+    /* A hand-written mana ability replaces the derived one rather than sitting
+       behind it. Sol Ring's produced_mana is ["C"], which derives as one mana;
+       the entry that knows it makes two has to be the one that is used. */
+    const handMakesMana = hand.abilities.some((a) => a.kind === "mana")
+    abilities = [...(handMakesMana ? [] : derived), ...hand.abilities]
     encoded = abilities.some(hasUnimplemented) ? "partial" : "full"
     attach = hand.attach
   } else {

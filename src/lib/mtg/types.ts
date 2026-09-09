@@ -148,7 +148,17 @@ export type Ability =
   | { kind: "static"; effect: StaticEffect }
   | { kind: "triggered"; on: TriggerEvent; effects: Effect[]; optional?: boolean }
   | { kind: "activated"; cost: ActivationCost; effects: Effect[] }
-  | { kind: "mana"; cost: ActivationCost; produces: ManaSymbol[] }
+  | { kind: "mana"; cost: ActivationCost; produces: ManaOption[] }
+
+/**
+ * One mana, of any of these symbols.
+ *
+ * Scryfall's `produced_mana` lists the colours a source *can* make, not how
+ * many mana it makes: a Command Tower is ["W","U","B","R","G"] and taps for
+ * one. Reading that list as an amount made a single land pay for a four-drop.
+ * A mana ability therefore produces a list of choices, one entry per mana.
+ */
+export type ManaOption = ManaSymbol[]
 
 export interface ActivationCost {
   mana?: string

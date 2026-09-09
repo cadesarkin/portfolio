@@ -8,7 +8,7 @@
 
 import { aiCastSpells, aiDeclareAttackers, aiDeclareBlockers, aiEquip, aiPlayLand } from "./ai"
 import { declareAttackers, declareBlockers } from "./combat"
-import { stateBasedActions } from "./stack"
+import { resolveAll, stateBasedActions } from "./stack"
 import { advance } from "./turn"
 import type { GameState, PlayerId } from "./types"
 
@@ -35,6 +35,15 @@ export function runUntilPlayer(state: GameState, limit = 400): Waiting {
   stateBasedActions(state)
   let guard = 0
   while (state.winner === null && guard++ < limit) {
+    /* Resolve anything waiting before handing control back. Nobody in this
+       game responds to a spell, so leaving it on the stack only meant the
+       player could not cast a second one: "the stack is not empty". */
+    if (state.stack.length > 0) {
+      resolveAll(state)
+      stateBasedActions(state)
+      continue
+    }
+
     // The player's own decision points.
     if (state.active === HUMAN) {
       if (state.phase === "main1" || state.phase === "main2") return { for: "player-main" }

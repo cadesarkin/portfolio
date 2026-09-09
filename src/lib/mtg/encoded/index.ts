@@ -88,17 +88,17 @@ export const ENCODED: Record<string, EncodedCard> = {
   /* ── Mana creatures ─────────────────────────────────────────────────── */
 
   "Elvish Mystic": {
-    abilities: [{ kind: "mana", cost: { tap: true }, produces: ["G"] }],
+    abilities: [{ kind: "mana", cost: { tap: true }, produces: [["G"]] }],
   },
   "Llanowar Elves": {
-    abilities: [{ kind: "mana", cost: { tap: true }, produces: ["G"] }],
+    abilities: [{ kind: "mana", cost: { tap: true }, produces: [["G"]] }],
   },
   "Avacyn's Pilgrim": {
-    abilities: [{ kind: "mana", cost: { tap: true }, produces: ["W"] }],
+    abilities: [{ kind: "mana", cost: { tap: true }, produces: [["W"]] }],
   },
   "Birds of Paradise": {
     abilities: [
-      { kind: "mana", cost: { tap: true }, produces: ["W", "U", "B", "R", "G"] },
+      { kind: "mana", cost: { tap: true }, produces: [["W", "U", "B", "R", "G"]] },
     ],
   },
 
@@ -180,7 +180,7 @@ export const ENCODED: Record<string, EncodedCard> = {
   },
 
   "Sol Ring": {
-    abilities: [{ kind: "mana", cost: { tap: true }, produces: ["C", "C"] }],
+    abilities: [{ kind: "mana", cost: { tap: true }, produces: [["C"], ["C"]] }],
   },
 
   /* ── Damage on a trigger ────────────────────────────────────────────── */
@@ -460,17 +460,17 @@ export const ENCODED: Record<string, EncodedCard> = {
   /* ── Signets and rocks that cost mana to use ────────────────────────── */
 
   "Boros Signet": {
-    abilities: [{ kind: "mana", cost: { tap: true, mana: "{1}" }, produces: ["R", "W"] }],
+    abilities: [{ kind: "mana", cost: { tap: true, mana: "{1}" }, produces: [["R"], ["W"]] }],
   },
   "Orzhov Signet": {
-    abilities: [{ kind: "mana", cost: { tap: true, mana: "{1}" }, produces: ["W", "B"] }],
+    abilities: [{ kind: "mana", cost: { tap: true, mana: "{1}" }, produces: [["W"], ["B"]] }],
   },
   "Rakdos Signet": {
-    abilities: [{ kind: "mana", cost: { tap: true, mana: "{1}" }, produces: ["B", "R"] }],
+    abilities: [{ kind: "mana", cost: { tap: true, mana: "{1}" }, produces: [["B"], ["R"]] }],
   },
   "Basalt Monolith": {
     abilities: [
-      { kind: "mana", cost: { tap: true }, produces: ["C", "C", "C"] },
+      { kind: "mana", cost: { tap: true }, produces: [["C"], ["C"], ["C"]] },
       { kind: "spell", effects: [{ do: "unimplemented", note: "does not untap during your untap step" }] },
     ],
   },
@@ -479,7 +479,7 @@ export const ENCODED: Record<string, EncodedCard> = {
     // Two mana abilities on the card; the engine offers one, which still makes
     // exactly one mana, so the card is worth what it should be.
     abilities: [
-      { kind: "mana", cost: { tap: true }, produces: ["C", "R", "W"] },
+      { kind: "mana", cost: { tap: true }, produces: [["C", "R", "W"]] },
       { kind: "spell", effects: [{ do: "unimplemented", note: "coloured mana costs you 1 life" }] },
     ],
   },

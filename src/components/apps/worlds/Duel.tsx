@@ -4,7 +4,18 @@ import { useCallback, useRef, useState } from "react"
 import { Cost } from "./CardFace"
 import { DECKS, cardDef } from "@/lib/mtg/cards"
 import { createGame } from "@/lib/mtg/state"
-import { canCast, canEquip, canPlayLand, castSpell, equip, playLand } from "@/lib/mtg/actions"
+import {
+  canCast,
+  canEquip,
+  canPlayLand,
+  canTapForMana,
+  castSpell,
+  equip,
+  manaAbilityOf,
+  playLand,
+  tapForMana,
+} from "@/lib/mtg/actions"
+import { useWindowKeys } from "@/components/desktop/use-window-keys"
 import {
   attachmentsOf,
   canTarget,
@@ -23,7 +34,7 @@ import {
   runUntilPlayer,
   type Waiting,
 } from "@/lib/mtg/duel"
-import type { GameCard, GameState } from "@/lib/mtg/types"
+import type { GameCard, GameState, Pool } from "@/lib/mtg/types"
 
 /** Colour by how much of a card's text the engine runs. */
 const ENCODED_MARK: Record<string, { label: string; colour: string } | null> = {
@@ -39,7 +50,7 @@ const deckName = (id: string): string => {
   return (cardDef(deck.commander)?.name ?? deck.commander).split(",")[0]
 }
 
-export default function Duel() {
+export default function Duel({ winId }: { winId: string }) {
   const [state, setState] = useState<GameState | null>(null)
   const [waiting, setWaiting] = useState<Waiting>({ for: "player-main" })
   const [attackers, setAttackers] = useState<number[]>([])
@@ -49,6 +60,10 @@ export default function Duel() {
   const [blockTarget, setBlockTarget] = useState<number | null>(null)
   /** The Equipment waiting to be put on a creature. */
   const [equipping, setEquipping] = useState<number | null>(null)
+  /** The permanent under the cursor, which the keyboard acts on. */
+  const [hovered, setHovered] = useState<number | null>(null)
+  /** Which zone is open in the side panel. */
+  const [openZone, setOpenZone] = useState<"graveyard" | "exile" | "log">("log")
   const [inspect, setInspect] = useState<GameCard | null>(null)
   const seed = useRef(Math.floor(Math.random() * 100000))
 
@@ -67,6 +82,45 @@ export default function Duel() {
     setState({ ...g })
     setWaiting(next)
   }, [])
+
+  /**
+   * Tapping is manual, on whatever is under the cursor.
+   *
+   * `t` taps a source for mana and untaps it again if it was already tapped;
+   * `u` untaps everything, which is what a Seedborn Muse effect amounts to
+   * while the engine cannot grant one properly.
+   */
+  useWindowKeys(winId, (e) => {
+    if (!state || state.winner !== null) return
+    const board = state.players[HUMAN].battlefield
+      .map((id) => state.cards[id])
+      .filter(Boolean)
+    const key = e.key.toLowerCase()
+
+    if (key === "t" && hovered !== null) {
+      e.preventDefault()
+      const card = state.cards[hovered]
+      if (!card || card.controller !== HUMAN) return
+      if (card.tapped) card.tapped = false
+      else if (canTapForMana(state, card.id) === null) tapForMana(state, card.id)
+      else card.tapped = true
+      commit(state, waiting)
+      return
+    }
+
+    if (key === "u") {
+      e.preventDefault()
+      for (const card of board) card.tapped = false
+      commit(state, waiting)
+      return
+    }
+
+    if (key === "escape") {
+      setPicking(null)
+      setEquipping(null)
+      setBlockTarget(null)
+    }
+  })
 
   if (!state) return <DeckPicker onPick={start} />
 
@@ -171,6 +225,11 @@ export default function Duel() {
           hand={them.hand.length}
           library={them.library.length}
           align="top"
+          zones={{
+            graveyard: them.graveyard.length,
+            exile: them.exile.length,
+            command: them.command.length,
+          }}
         />
         <Battlefield
           state={state}
@@ -256,6 +315,7 @@ export default function Duel() {
                   ? "#7fb4e0"
                   : null
           }
+          onHover={setHovered}
           badge={(c) => {
             const blocking = blocks[c.id]
             if (blocking !== undefined) {
@@ -273,6 +333,13 @@ export default function Duel() {
           hand={me.hand.length}
           library={me.library.length}
           align="bottom"
+          pool={me.pool}
+          zones={{
+            graveyard: me.graveyard.length,
+            exile: me.exile.length,
+            command: me.command.length,
+          }}
+          onZone={(z) => setOpenZone((cur) => (cur === z ? "log" : z))}
         />
 
         {/* Hand */}
@@ -378,7 +445,7 @@ export default function Duel() {
           <span style={{ marginLeft: "auto", fontSize: 11, color: "#6f6688" }}>
             {waiting.for === "player-blockers"
               ? "pick an attacker, then the creatures that block it"
-              : "click a card to play it · right-click to inspect"}
+              : "click to play · t taps for mana · u untaps all · right-click inspects"}
           </span>
         </div>
       </div>
@@ -395,19 +462,50 @@ export default function Duel() {
         }}
       >
         {inspect && <Inspector card={inspect} state={state} onClose={() => setInspect(null)} />}
-        <div style={{ flex: "1 1 auto", overflowY: "auto", padding: "8px 10px", fontSize: 11 }}>
-          {state.log.slice(-70).map((entry, i) => (
-            <div
-              key={i}
-              style={{
-                color: entry.unimplemented ? "#c07a63" : "#9c92b8",
-                padding: "1px 0",
-                lineHeight: 1.35,
-              }}
+
+        <div
+          style={{
+            display: "flex",
+            gap: 4,
+            padding: "5px 8px",
+            borderBottom: "1px solid rgba(160,140,220,0.2)",
+          }}
+        >
+          {(["log", "graveyard", "exile"] as const).map((z) => (
+            <button
+              key={z}
+              type="button"
+              className="seg on-dark"
+              data-active={openZone === z ? "" : undefined}
+              style={{ fontSize: 10, padding: "2px 7px" }}
+              onClick={() => setOpenZone(z)}
             >
-              {entry.text}
-            </div>
+              {z}
+            </button>
           ))}
+        </div>
+
+        <div style={{ flex: "1 1 auto", overflowY: "auto", padding: "8px 10px", fontSize: 11 }}>
+          {openZone === "log" ? (
+            state.log.slice(-70).map((entry, i) => (
+              <div
+                key={i}
+                style={{
+                  color: entry.unimplemented ? "#c07a63" : "#9c92b8",
+                  padding: "1px 0",
+                  lineHeight: 1.35,
+                }}
+              >
+                {entry.text}
+              </div>
+            ))
+          ) : (
+            <ZoneList
+              you={cards(openZone === "graveyard" ? me.graveyard : me.exile)}
+              them={cards(openZone === "graveyard" ? them.graveyard : them.exile)}
+              onInspect={setInspect}
+            />
+          )}
         </div>
       </aside>
     </div>
@@ -453,31 +551,86 @@ function PlayerBar({
   hand,
   library,
   align,
+  pool,
+  zones,
+  onZone,
 }: {
   name: string
   life: number
   hand: number
   library: number
   align: "top" | "bottom"
+  pool?: Pool
+  zones?: { graveyard: number; exile: number; command: number }
+  onZone?: (z: "graveyard" | "exile") => void
 }) {
+  const floating = pool
+    ? (Object.entries(pool) as [string, number][]).filter(([, n]) => n > 0)
+    : []
   return (
     <div
       style={{
         display: "flex",
-        gap: 14,
+        gap: 12,
         alignItems: "center",
         padding: "5px 10px",
         fontSize: 11,
         color: "#9c92b8",
+        flexWrap: "wrap",
         borderBottom: align === "top" ? "1px solid rgba(160,140,220,0.14)" : undefined,
         borderTop: align === "bottom" ? "1px solid rgba(160,140,220,0.14)" : undefined,
       }}
     >
       <span style={{ color: "#e4e0ee" }}>{name}</span>
       <span style={{ color: life <= 10 ? "#e07a63" : "#8fe0a0", fontWeight: 700 }}>{life} life</span>
-      <span>{hand} in hand</span>
-      <span>{library} in library</span>
+      <span>{hand} hand</span>
+      <span>{library} library</span>
+      {zones && (
+        <>
+          <ZoneChip label="graveyard" n={zones.graveyard} onClick={() => onZone?.("graveyard")} />
+          <ZoneChip label="exile" n={zones.exile} onClick={() => onZone?.("exile")} />
+          <ZoneChip label="command" n={zones.command} />
+        </>
+      )}
+      {pool && (
+        <span style={{ marginLeft: "auto", display: "flex", gap: 4, alignItems: "center" }}>
+          <span style={{ color: "#6f6688" }}>mana</span>
+          {floating.length === 0 ? (
+            <span style={{ color: "#6f6688" }}>—</span>
+          ) : (
+            floating.map(([sym, n]) => (
+              <span key={sym} style={{ color: "#ffd166", fontWeight: 700 }}>
+                {n}
+                {sym}
+              </span>
+            ))
+          )}
+        </span>
+      )}
     </div>
+  )
+}
+
+function ZoneChip({ label, n, onClick }: { label: string; n: number; onClick?: () => void }) {
+  const content = `${label} ${n}`
+  if (!onClick) return <span style={{ color: n ? "#9c92b8" : "#5d5578" }}>{content}</span>
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        font: "inherit",
+        fontSize: 11,
+        background: "none",
+        border: 0,
+        padding: 0,
+        cursor: "pointer",
+        textDecoration: n ? "underline dotted" : "none",
+        color: n ? "#b7abd6" : "#5d5578",
+      }}
+    >
+      {content}
+    </button>
   )
 }
 
@@ -487,6 +640,7 @@ function Battlefield({
   onClick,
   highlight,
   badge,
+  onHover,
   onInspect,
 }: {
   state: GameState
@@ -494,14 +648,15 @@ function Battlefield({
   onClick: (c: GameCard) => void
   highlight: (c: GameCard) => string | null
   badge?: (c: GameCard) => string | null
+  onHover?: (id: number | null) => void
   onInspect: (c: GameCard) => void
 }) {
   const lands = cards.filter((c) => c.def.types.includes("Land"))
   const rest = cards.filter((c) => !c.def.types.includes("Land"))
   return (
     <div style={{ flex: "1 1 auto", minHeight: 96, padding: "6px 10px", overflowY: "auto" }}>
-      <Row cards={rest} state={state} onClick={onClick} highlight={highlight} badge={badge} onInspect={onInspect} />
-      <Row cards={lands} state={state} onClick={onClick} highlight={highlight} onInspect={onInspect} small />
+      <Row cards={rest} state={state} onClick={onClick} highlight={highlight} badge={badge} onHover={onHover} onInspect={onInspect} />
+      <Row cards={lands} state={state} onClick={onClick} highlight={highlight} onHover={onHover} onInspect={onInspect} small />
     </div>
   )
 }
@@ -512,6 +667,7 @@ function Row({
   onClick,
   highlight,
   badge,
+  onHover,
   onInspect,
   small,
 }: {
@@ -520,6 +676,7 @@ function Row({
   onClick: (c: GameCard) => void
   highlight: (c: GameCard) => string | null
   badge?: (c: GameCard) => string | null
+  onHover?: (id: number | null) => void
   onInspect: (c: GameCard) => void
   small?: boolean
 }) {
@@ -535,6 +692,7 @@ function Row({
           outline={highlight(c)}
           badge={badge?.(c) ?? null}
           onClick={() => onClick(c)}
+          onHover={onHover}
           onInspect={() => onInspect(c)}
         />
       ))}
@@ -548,6 +706,7 @@ function Permanent({
   small,
   outline,
   badge,
+  onHover,
   onClick,
   onInspect,
 }: {
@@ -556,6 +715,7 @@ function Permanent({
   small?: boolean
   outline: string | null
   badge?: string | null
+  onHover?: (id: number | null) => void
   onClick: () => void
   onInspect: () => void
 }) {
@@ -566,11 +726,13 @@ function Permanent({
     <button
       type="button"
       onClick={onClick}
+      onMouseEnter={() => onHover?.(card.id)}
+      onMouseLeave={() => onHover?.(null)}
       onContextMenu={(e) => {
         e.preventDefault()
         onInspect()
       }}
-      title={card.def.name}
+      title={`${card.def.name}${manaAbilityOf(card) ? " — t to tap for mana" : ""}`}
       style={{
         font: "inherit",
         textAlign: "left",
@@ -690,6 +852,56 @@ function HandCard({
       </div>
       {mark && <div style={{ fontSize: 8, color: mark.colour, marginTop: 1 }}>{mark.label}</div>}
     </button>
+  )
+}
+
+/** The contents of a graveyard or exile, both sides. */
+function ZoneList({
+  you,
+  them,
+  onInspect,
+}: {
+  you: GameCard[]
+  them: GameCard[]
+  onInspect: (c: GameCard) => void
+}) {
+  const section = (label: string, list: GameCard[]) => (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ fontSize: 9, letterSpacing: "0.12em", color: "#6f6688", marginBottom: 3 }}>
+        {label.toUpperCase()} ({list.length})
+      </div>
+      {list.length === 0 ? (
+        <div style={{ color: "#5d5578" }}>empty</div>
+      ) : (
+        list.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => onInspect(c)}
+            style={{
+              display: "block",
+              width: "100%",
+              textAlign: "left",
+              font: "inherit",
+              fontSize: 10.5,
+              background: "none",
+              border: 0,
+              padding: "1px 0",
+              color: "#9c92b8",
+              cursor: "pointer",
+            }}
+          >
+            {c.def.name}
+          </button>
+        ))
+      )}
+    </div>
+  )
+  return (
+    <>
+      {section("yours", you)}
+      {section("opponent", them)}
+    </>
   )
 }
 

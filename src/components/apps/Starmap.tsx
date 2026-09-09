@@ -460,7 +460,7 @@ function WorldApp({
     case "bowling":
       return <Bowling winId={winId} isMobile={isMobile} />
     case "decks":
-      return <Arcanum />
+      return <Arcanum winId={winId} />
     default:
       return null
   }

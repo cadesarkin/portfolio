@@ -7,10 +7,18 @@
  */
 
 import { isInstantSpeed, isPermanent } from "./cards"
-import { addMana, canPay, costTotal, parseCost, payFrom } from "./mana"
+import { addMana, canPay, costTotal, parseCost, payFrom, type Cost } from "./mana"
 import { battlefield, log, moveCard, subject } from "./state"
 import { checkTriggers, pushStack, stateBasedActions } from "./stack"
-import type { GameCard, GameState, ManaSymbol, PlayerId, TargetRef } from "./types"
+import type {
+  GameCard,
+  GameState,
+  ManaOption,
+  ManaSymbol,
+  Pool,
+  PlayerId,
+  TargetRef,
+} from "./types"
 import { MAIN_PHASES } from "./types"
 
 export type Refusal = string | null
@@ -25,7 +33,7 @@ export function availableMana(state: GameState, playerId: PlayerId): number {
 }
 
 /** The mana ability a permanent can use right now, if any. */
-export function manaAbilityOf(card: GameCard): { produces: ManaSymbol[]; cost: string } | null {
+export function manaAbilityOf(card: GameCard): { produces: ManaOption[]; cost: string } | null {
   for (const ability of card.def.abilities) {
     if (ability.kind !== "mana") continue
     // A creature that taps for mana is still subject to summoning sickness.
@@ -38,14 +46,30 @@ export function manaAbilityOf(card: GameCard): { produces: ManaSymbol[]; cost: s
 /**
  * What a source adds to the pool, after paying for itself.
  *
- * A Signet costs {1} to activate and makes two mana, so it is worth one. Taking
- * the produced mana without charging the activation cost would quietly hand out
- * a free mana every turn from four different cards.
+ * The count is how many mana it makes — one entry per mana — not how many
+ * colours it could make. A Command Tower lists five colours and taps for one; a
+ * Signet costs {1} and makes two, so it is worth one.
  */
 export function netManaOf(card: GameCard): number {
   const ability = manaAbilityOf(card)
   if (!ability) return 0
   return ability.produces.length - costTotal(parseCost(ability.cost))
+}
+
+/**
+ * The coloured mana a cost still needs, given what is already floating.
+ *
+ * Used to choose which colour to take from a source that offers a choice, so a
+ * dual land is taken as the colour the spell actually needs.
+ */
+export function shortfall(pool: Pool, cost: Cost): ManaSymbol[] {
+  const have: Record<string, number> = { ...pool }
+  const need: ManaSymbol[] = []
+  for (const pip of cost.pips) {
+    if ((have[pip] ?? 0) > 0) have[pip] -= 1
+    else need.push(pip)
+  }
+  return need
 }
 
 export function canTapForMana(state: GameState, cardId: number): Refusal {
@@ -62,7 +86,17 @@ export function canTapForMana(state: GameState, cardId: number): Refusal {
   return null
 }
 
-export function tapForMana(state: GameState, cardId: number): boolean {
+/**
+ * Taps a source for mana.
+ *
+ * `want` lists the colours that would be useful; each mana produced is taken as
+ * the first wanted colour it can be, and otherwise as the first it offers.
+ */
+export function tapForMana(
+  state: GameState,
+  cardId: number,
+  want: ManaSymbol[] = []
+): boolean {
   if (canTapForMana(state, cardId) !== null) return false
   const card = state.cards[cardId]
   const ability = manaAbilityOf(card)!
@@ -75,8 +109,20 @@ export function tapForMana(state: GameState, cardId: number): boolean {
     player.pool = paid
   }
 
+  const wanted = [...want]
+  const taken: ManaSymbol[] = []
+  for (const option of ability.produces) {
+    const i = wanted.findIndex((w) => option.includes(w))
+    if (i >= 0) {
+      taken.push(wanted[i])
+      wanted.splice(i, 1)
+    } else {
+      taken.push(option[0])
+    }
+  }
+
   card.tapped = true
-  player.pool = addMana(player.pool, ability.produces)
+  player.pool = addMana(player.pool, taken)
   return true
 }
 
@@ -102,7 +148,8 @@ export function autoTapFor(state: GameState, playerId: PlayerId, cost: string, e
     })
 
   for (const source of sources) {
-    tapForMana(state, source.id)
+    // Take each source as whatever colour the cost still needs.
+    tapForMana(state, source.id, shortfall(state.players[playerId].pool, parsed))
     if (canPay(state.players[playerId].pool, parsed, extra)) return true
   }
   return canPay(state.players[playerId].pool, parsed, extra)

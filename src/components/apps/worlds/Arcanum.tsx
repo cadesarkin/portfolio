@@ -31,7 +31,7 @@ const PIP_BG: Record<string, string> = {
 
 type Tab = "decks" | "packs" | "duel"
 
-export default function Arcanum() {
+export default function Arcanum({ winId }: { winId: string }) {
   const [tab, setTab] = useState<Tab>("decks")
   const [deckId, setDeckId] = useState(DECKS[0]?.id ?? "")
   const deck = DECKS.find((d) => d.id === deckId) ?? DECKS[0]
@@ -93,7 +93,7 @@ export default function Arcanum() {
           background: "rgba(9, 6, 18, 0.84)",
         }}
       >
-        {tab === "decks" ? <DeckView deck={deck} /> : tab === "packs" ? <PackView /> : <Duel />}
+        {tab === "decks" ? <DeckView deck={deck} /> : tab === "packs" ? <PackView /> : <Duel winId={winId} />}
       </div>
     </div>
   )

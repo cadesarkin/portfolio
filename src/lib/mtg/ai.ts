@@ -9,6 +9,7 @@
  */
 
 import { canCast, canEquip, canPlayLand, castSpell, equip, playLand } from "./actions"
+import { isPermanent } from "./cards"
 import { canAttack, canBlock, declareAttackers, declareBlockers } from "./combat"
 import { hasKeyword, powerOf, toughnessOf } from "./continuous"
 import { battlefield, cardsIn, opponentOf } from "./state"
@@ -40,6 +41,7 @@ export function aiCastSpells(state: GameState, me: PlayerId, limit = 6): number 
       ...cardsIn(state, state.players[me].command),
     ]
       .filter((c) => canCast(state, c.id) === null)
+      .filter((c) => worthCasting(state, c))
       .sort((a, b) => b.def.cmc - a.def.cmc)
 
     const pick = options[0]
@@ -49,6 +51,31 @@ export function aiCastSpells(state: GameState, me: PlayerId, limit = 6): number 
     cast++
   }
   return cast
+}
+
+/**
+ * Whether a card is worth spending mana on.
+ *
+ * The AI used to cast anything it could afford, which meant it emptied its hand
+ * of instants that resolve and do nothing — it looked like a player making
+ * random moves. A permanent is always worth playing, because a body on the
+ * board is a body. A spell is only worth casting if some of it actually runs.
+ */
+export function worthCasting(state: GameState, card: GameCard): boolean {
+  if (isPermanent(card.def)) return true
+
+  const effects = card.def.abilities
+    .filter((a) => a.kind === "spell")
+    .flatMap((a) => (a.kind === "spell" ? a.effects : []))
+  const real = effects.filter((e) => e.do !== "unimplemented")
+  if (real.length === 0) return false
+
+  // A removal spell with nothing to point at is mana thrown away.
+  const needsTarget = real.some((e) => "target" in e && e.target?.chosen)
+  if (!needsTarget) return true
+  return battlefield(state).some(
+    (c) => c.def.types.includes("Creature") && c.controller !== card.controller
+  )
 }
 
 /**
