@@ -91,6 +91,17 @@ for (let i = 0; i < all.length; i += 75) {
       rarity: c.rarity ?? "common",
       set: (c.set ?? "").toUpperCase(),
       text: (c.oracle_text ?? face?.oracle_text ?? "").slice(0, 400),
+      // Fields the duel engine needs. Power and toughness stay as printed
+      // strings: "*" and "1+*" are real values and parsing them to a number
+      // here would quietly turn them into NaN.
+      power: c.power ?? face?.power ?? null,
+      toughness: c.toughness ?? face?.toughness ?? null,
+      loyalty: c.loyalty ?? face?.loyalty ?? null,
+      keywords: c.keywords ?? [],
+      subtypes: ((c.type_line ?? face?.type_line ?? "").split(" — ")[1] ?? "")
+        .split(" ")
+        .filter(Boolean),
+      produces: c.produced_mana ?? [],
     }
   }
   for (const nf of data.not_found ?? []) missing.push(nf.name)

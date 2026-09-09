@@ -38,8 +38,6 @@ const DATA = raw as unknown as {
 
 export const DECKS: Deck[] = DATA.decks
 export const CARDS: Record<string, Card> = DATA.cards
-export const GENERATED = DATA.generated
-
 export const cardByName = (name: string): Card | undefined => CARDS[name]
 
 /**

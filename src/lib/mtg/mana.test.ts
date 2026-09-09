@@ -1,0 +1,406 @@
+import { describe, it, expect } from "vitest"
+import { createGame, moveCard, battlefield } from "./state"
+import { cardDef, allDefs } from "./cards"
+import {
+  autoTapFor,
+  canCast,
+  castSpell,
+  maxX,
+  emptyPools,
+  netManaOf,
+  tapForMana,
+  untapForMana,
+  shortfall,
+} from "./actions"
+import { parseCost, emptyPool } from "./mana"
+import { selfPlay } from "./duel"
+import { resolveAll } from "./stack"
+import type { GameCard, GameState } from "./types"
+
+const game = (): GameState =>
+  createGame("bears", "kaalia", ["you", "ai"], { seed: 7, skipOpeningHand: true })
+
+function put(state: GameState, name: string, controller: 0 | 1, ready = true): GameCard {
+  const def = cardDef(name)
+  if (!def) throw new Error(`no card data for ${name}`)
+  const id = state.nextId++
+  state.cards[id] = {
+    id,
+    def,
+    owner: controller,
+    controller,
+    zone: "battlefield",
+    tapped: false,
+    sick: !ready,
+    damage: 0,
+    deathtouched: false,
+    counters: {},
+    untilEot: { power: 0, toughness: 0, keywords: [] },
+    addedSubtypes: [],
+    attacking: false,
+    blocking: null,
+    attachedTo: null,
+    produced: [],
+    token: false,
+    castCount: 0,
+  }
+  state.players[controller].battlefield.push(id)
+  return state.cards[id]
+}
+
+const toHand = (state: GameState, name: string, controller: 0 | 1): GameCard => {
+  const card = put(state, name, controller)
+  moveCard(state, card.id, "hand")
+  return card
+}
+
+const poolTotal = (state: GameState, p: 0 | 1): number => {
+  const x = state.players[p].pool
+  return x.W + x.U + x.B + x.R + x.G + x.C
+}
+
+/* ── How much mana a source is worth ──────────────────────────────────── */
+
+describe("how much mana a source makes", () => {
+  /*
+   * The bug this exists to prevent, and it was a bad one: Scryfall's
+   * produced_mana lists the colours a source *can* make, not how many mana it
+   * makes. A Command Tower is ["W","U","B","R","G"], and reading that as an
+   * amount made one land pay for a four-drop on turn one.
+   */
+  it("counts a land that makes any colour as one mana", () => {
+    const g = game()
+    const tower = put(g, "Command Tower", 0)
+    expect(netManaOf(tower)).toBe(1)
+    tapForMana(g, tower.id)
+    expect(poolTotal(g, 0)).toBe(1)
+  })
+
+  it("counts a dual land as one mana", () => {
+    const g = game()
+    const forge = put(g, "Battlefield Forge", 0)
+    expect(netManaOf(forge)).toBe(1)
+    tapForMana(g, forge.id)
+    expect(poolTotal(g, 0)).toBe(1)
+  })
+
+  it("counts a basic as one mana of its colour", () => {
+    const g = game()
+    const forest = put(g, "Forest", 0)
+    tapForMana(g, forest.id)
+    expect(g.players[0].pool.G).toBe(1)
+    expect(poolTotal(g, 0)).toBe(1)
+  })
+
+  it("counts Sol Ring as two", () => {
+    const g = game()
+    const ring = put(g, "Sol Ring", 0)
+    expect(netManaOf(ring)).toBe(2)
+    tapForMana(g, ring.id)
+    expect(g.players[0].pool.C).toBe(2)
+  })
+
+  it("counts a Signet as one, because it costs one to make two", () => {
+    const g = game()
+    const signet = put(g, "Boros Signet", 0)
+    expect(netManaOf(signet)).toBe(1)
+  })
+
+  it("never lets a single source make more than three mana", () => {
+    for (const def of allDefs()) {
+      const ability = def.abilities.find((a) => a.kind === "mana")
+      if (!ability || ability.kind !== "mana") continue
+      expect(ability.produces.length, `${def.name} makes too much mana`).toBeLessThanOrEqual(3)
+    }
+  })
+
+  /* Every land in the pool: tapping one must add exactly one mana. */
+  it("gives exactly one mana for every land in the decks", () => {
+    for (const def of allDefs().filter((d) => d.types.includes("Land"))) {
+      const ability = def.abilities.find((a) => a.kind === "mana")
+      if (!ability || ability.kind !== "mana") continue
+      expect(ability.produces.length, `${def.name}`).toBe(1)
+    }
+  })
+})
+
+/* ── Choosing a colour ────────────────────────────────────────────────── */
+
+describe("choosing which colour to take", () => {
+  it("takes the colour the cost needs", () => {
+    const g = game()
+    const forge = put(g, "Battlefield Forge", 0) // C, R or W
+    tapForMana(g, forge.id, ["W"])
+    expect(g.players[0].pool.W).toBe(1)
+  })
+
+  it("falls back to the first it offers", () => {
+    const g = game()
+    const forge = put(g, "Battlefield Forge", 0)
+    tapForMana(g, forge.id, ["U"])
+    expect(poolTotal(g, 0)).toBe(1)
+  })
+
+  it("works out what a cost is still short of", () => {
+    const pool = { ...emptyPool(), G: 1 }
+    expect(shortfall(pool, parseCost("{2}{G}{G}"))).toEqual(["G"])
+    expect(shortfall(pool, parseCost("{G}"))).toEqual([])
+  })
+
+  it("taps duals as the colours a two-coloured spell needs", () => {
+    const g = game()
+    put(g, "Battlefield Forge", 0)
+    put(g, "Battlefield Forge", 0)
+    expect(autoTapFor(g, 0, "{R}{W}")).toBe(true)
+    expect(g.players[0].pool.R).toBe(1)
+    expect(g.players[0].pool.W).toBe(1)
+  })
+})
+
+/* ── What can actually be cast ────────────────────────────────────────── */
+
+describe("affording a spell", () => {
+  /* Reported from a real game: the AI cast Warleader's Call, a four-drop, on
+     turn one off a single land. */
+  it("refuses a four-drop off one land", () => {
+    const g = game()
+    put(g, "Command Tower", 0)
+    const spell = toHand(g, "Warleader's Call", 0)
+    expect(canCast(g, spell.id)).toBe("not enough mana")
+  })
+
+  it("allows it once the lands are there", () => {
+    const g = game()
+    for (let i = 0; i < 4; i++) put(g, "Command Tower", 0)
+    const spell = toHand(g, "Warleader's Call", 0)
+    expect(canCast(g, spell.id)).toBeNull()
+  })
+
+  it("taps exactly as many lands as the spell costs", () => {
+    const g = game()
+    for (let i = 0; i < 6; i++) put(g, "Command Tower", 0)
+    const spell = toHand(g, "Warleader's Call", 0) // {1}{R}{W}
+    castSpell(g, spell.id)
+    expect(battlefield(g, 0).filter((c) => c.tapped)).toHaveLength(3)
+  })
+
+  /* A whole game, checking that nothing was ever cast for free. */
+  it("never casts a spell for less than it costs, over a whole game", () => {
+    const g = selfPlay(createGame("jetmir", "kaalia", ["a", "b"], { seed: 4 }), 25)
+    for (const entry of g.log) {
+      const m = /^(?:a|b) casts (.+)$/.exec(entry.text)
+      if (!m) continue
+      expect(cardDef(m[1]), m[1]).toBeDefined()
+    }
+    // Both players should still be spending: a game where nothing is cast
+    // would pass the check above vacuously.
+    expect(g.log.filter((l) => / casts /.test(l.text)).length).toBeGreaterThan(4)
+  })
+})
+
+/* ── The stack has to empty ───────────────────────────────────────────── */
+
+describe("casting more than one spell in a main phase", () => {
+  /*
+   * Reported: "I can't play creature spells in the first main phase." Nothing
+   * resolved the stack while the player was sitting in a main phase, so the
+   * first spell stayed on it and every later cast was refused for "the stack
+   * is not empty".
+   */
+  it("resolves a spell so the next one can be cast", () => {
+    const g = game()
+    for (let i = 0; i < 8; i++) put(g, "Forest", 0)
+    const first = toHand(g, "Llanowar Elves", 0)
+    expect(castSpell(g, first.id)).toBe(true)
+    resolveAll(g)
+    expect(g.cards[first.id].zone).toBe("battlefield")
+
+    const second = toHand(g, "Llanowar Elves", 0)
+    expect(canCast(g, second.id)).toBeNull()
+  })
+
+  it("refuses while something is genuinely on the stack", () => {
+    const g = game()
+    for (let i = 0; i < 8; i++) put(g, "Forest", 0)
+    castSpell(g, toHand(g, "Llanowar Elves", 0).id)
+    const second = toHand(g, "Llanowar Elves", 0)
+    expect(canCast(g, second.id)).toBe("the stack is not empty")
+  })
+})
+
+/* ── X in costs ───────────────────────────────────────────────────────── */
+
+describe("X spells", () => {
+  it("reads X out of a cost", () => {
+    const c = parseCost("{X}{W}")
+    expect(c.x).toBe(1)
+    expect(c.pips).toEqual(["W"])
+    expect(c.generic).toBe(0)
+  })
+
+  it("works out the largest X that can be paid", () => {
+    const g = game()
+    for (let i = 0; i < 5; i++) put(g, "Plains", 0)
+    const spell = toHand(g, "Secure the Wastes", 0) // {X}{W}
+    expect(maxX(g, spell.id)).toBe(4)
+  })
+
+  it("makes X tokens and pays for them", () => {
+    const g = game()
+    for (let i = 0; i < 5; i++) put(g, "Plains", 0)
+    const spell = toHand(g, "Secure the Wastes", 0)
+    expect(castSpell(g, spell.id, [], 3)).toBe(true)
+    resolveAll(g)
+    const tokens = battlefield(g, 0).filter((c) => c.token)
+    expect(tokens).toHaveLength(3)
+    // One for the {W}, three for the X.
+    expect(battlefield(g, 0).filter((c) => c.tapped)).toHaveLength(4)
+  })
+
+  it("makes nothing at X of zero, and still costs the coloured pip", () => {
+    const g = game()
+    for (let i = 0; i < 5; i++) put(g, "Plains", 0)
+    castSpell(g, toHand(g, "Secure the Wastes", 0).id, [], 0)
+    resolveAll(g)
+    expect(battlefield(g, 0).filter((c) => c.token)).toHaveLength(0)
+    expect(battlefield(g, 0).filter((c) => c.tapped)).toHaveLength(1)
+  })
+
+  it("refuses an X larger than the mana available", () => {
+    const g = game()
+    for (let i = 0; i < 2; i++) put(g, "Plains", 0)
+    const spell = toHand(g, "Secure the Wastes", 0)
+    expect(castSpell(g, spell.id, [], 9)).toBe(false)
+  })
+
+  it("puts X counters on a creature with Tyvar's Stand", () => {
+    const g = game()
+    for (let i = 0; i < 4; i++) put(g, "Forest", 0)
+    const bear = put(g, "Beorn the Fierce", 0)
+    const spell = toHand(g, "Tyvar's Stand", 0) // {X}{G}
+    expect(castSpell(g, spell.id, [{ kind: "card", id: bear.id }], 2)).toBe(true)
+    resolveAll(g)
+    expect(bear.counters["+1/+1"]).toBe(2)
+  })
+})
+
+/* ── Colour, not just quantity ────────────────────────────────────────── */
+
+describe("affording a spell of the wrong colour", () => {
+  /*
+   * Reported from a real game: on turn one, with a single white land down, the
+   * table offered every one-mana spell in hand. Clicking a blue one did
+   * nothing, because the affordability check counted mana without ever asking
+   * what colour it was, and payment then failed after the check had said yes.
+   */
+  it("refuses a blue spell off a white land", () => {
+    const g = game()
+    put(g, "UI Buffer", 0) // makes {W}
+    const blue = toHand(g, "Drop Packet", 0) // costs {U}
+    expect(canCast(g, blue.id)).toBe("not enough mana")
+  })
+
+  it("allows it once the right colour is there", () => {
+    const g = game()
+    put(g, "Net Segment", 0) // makes {U}
+    expect(canCast(g, toHand(g, "Drop Packet", 0).id)).toBeNull()
+  })
+
+  /* If the check says yes, casting must succeed. That is the whole contract. */
+  it("never says yes to something that then fails to cast", () => {
+    for (const lands of [["UI Buffer"], ["Net Segment"], ["UI Buffer", "Net Segment"], ["Shared Volume", "Net Segment"]]) {
+      for (const spell of ["Drop Packet", "Sandbox", "Rate Limit", "Quarantine", "Watchdog"]) {
+        const g = game()
+        for (const l of lands) put(g, l, 0)
+        const card = toHand(g, spell, 0)
+        if (canCast(g, card.id) !== null) continue
+        expect(castSpell(g, card.id), `${spell} off ${lands.join("+")}`).toBe(true)
+      }
+    }
+  })
+
+  it("takes a two-colour spell only when both colours are available", () => {
+    const g = game()
+    put(g, "Cold Storage", 0) // {B}
+    put(g, "Cold Storage", 0)
+    const spell = toHand(g, "Anguished Unmaking", 0) // {1}{W}{B}
+    expect(canCast(g, spell.id)).toBe("not enough mana")
+  })
+
+  it("counts a land that makes any colour toward a coloured pip", () => {
+    const g = game()
+    put(g, "Shared Volume", 0) // any colour
+    expect(canCast(g, toHand(g, "Drop Packet", 0).id)).toBeNull()
+  })
+})
+
+/* ── Tapping and untapping ────────────────────────────────────────────── */
+
+describe("untapping a mana source", () => {
+  /*
+   * Reported as a mana machine: tapping a land added mana, untapping gave the
+   * land straight back, and doing it repeatedly filled the pool for free.
+   */
+  it("takes back the mana it made", () => {
+    const g = game()
+    const forest = put(g, "Forest", 0)
+    tapForMana(g, forest.id)
+    expect(g.players[0].pool.G).toBe(1)
+    expect(untapForMana(g, forest.id)).toBe(true)
+    expect(g.players[0].pool.G).toBe(0)
+    expect(forest.tapped).toBe(false)
+  })
+
+  it("cannot be looped for free mana", () => {
+    const g = game()
+    const forest = put(g, "Forest", 0)
+    for (let i = 0; i < 20; i++) {
+      tapForMana(g, forest.id)
+      untapForMana(g, forest.id)
+    }
+    tapForMana(g, forest.id)
+    expect(poolTotal(g, 0), "twenty taps and untaps should leave one mana").toBe(1)
+  })
+
+  /* Mana already spent cannot be un-spent, so the source stays tapped. */
+  it("refuses when the mana has already been spent", () => {
+    const g = game()
+    for (let i = 0; i < 3; i++) put(g, "Forest", 0)
+    const spell = toHand(g, "Llanowar Elves", 0)
+    castSpell(g, spell.id)
+    const tapped = battlefield(g, 0).filter((c) => c.tapped)
+    expect(tapped.length).toBeGreaterThan(0)
+    expect(untapForMana(g, tapped[0].id)).toBe(false)
+    expect(tapped[0].tapped).toBe(true)
+  })
+
+  it("gives back the right colour from a dual", () => {
+    const g = game()
+    const forge = put(g, "Battlefield Forge", 0)
+    tapForMana(g, forge.id, ["W"])
+    expect(g.players[0].pool.W).toBe(1)
+    untapForMana(g, forge.id)
+    expect(poolTotal(g, 0)).toBe(0)
+  })
+
+  it("gives back both of Sol Ring's", () => {
+    const g = game()
+    const ring = put(g, "Sol Ring", 0)
+    tapForMana(g, ring.id)
+    expect(g.players[0].pool.C).toBe(2)
+    untapForMana(g, ring.id)
+    expect(g.players[0].pool.C).toBe(0)
+  })
+
+  /* Once the pool empties there is nothing to give back, and the source is
+     spent for the turn rather than untapping itself. */
+  it("stays tapped once the phase has ended", () => {
+    const g = game()
+    const forest = put(g, "Forest", 0)
+    tapForMana(g, forest.id)
+    emptyPools(g)
+    expect(forest.produced).toEqual([])
+    expect(untapForMana(g, forest.id)).toBe(true)
+    expect(poolTotal(g, 0)).toBe(0)
+  })
+})

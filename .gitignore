@@ -44,3 +44,6 @@ next-env.d.ts
 .agents/
 .claude/
 skills-lock.json
+
+# Report written by the test suite.
+card-report.txt
