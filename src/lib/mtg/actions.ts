@@ -225,3 +225,70 @@ export function emptyPools(state: GameState): void {
     p.pool = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 }
   }
 }
+
+/* ── Equipment ────────────────────────────────────────────────────────── */
+
+/**
+ * Whether an Equipment can be moved onto a creature.
+ *
+ * Equipping is a sorcery-speed activated ability, so it follows the same timing
+ * as casting: your turn, a main phase, an empty stack.
+ */
+export function canEquip(state: GameState, equipmentId: number, creatureId: number): Refusal {
+  const equipment = state.cards[equipmentId]
+  const creature = state.cards[creatureId]
+  if (!equipment || !creature) return "no such card"
+  if (state.winner !== null) return "the game is over"
+  if (equipment.def.attach?.kind !== "equipment") return "not an Equipment"
+  if (equipment.zone !== "battlefield") return "not on the battlefield"
+  if (creature.zone !== "battlefield") return "not on the battlefield"
+  if (!creature.def.types.includes("Creature")) return "not a creature"
+  if (creature.controller !== equipment.controller) return "only your own creatures"
+  if (state.active !== equipment.controller) return "only on your turn"
+  if (!MAIN_PHASES.includes(state.phase)) return "only in a main phase"
+  if (state.stack.length > 0) return "the stack is not empty"
+  if (equipment.attachedTo === creatureId) return "already attached to it"
+
+  const cost = equipment.def.attach.equipCost ?? "{0}"
+  const parsed = parseCost(cost)
+  const player = state.players[equipment.controller]
+  const floating =
+    player.pool.W + player.pool.U + player.pool.B + player.pool.R + player.pool.G + player.pool.C
+  const untapped = battlefield(state, equipment.controller)
+    .filter((c) => !c.tapped && manaAbilityOf(c) !== null)
+    .reduce((n, c) => n + Math.max(0, netManaOf(c)), 0)
+  if (floating + untapped < costTotal(parsed)) return "not enough mana"
+  return null
+}
+
+export function equip(state: GameState, equipmentId: number, creatureId: number): boolean {
+  if (canEquip(state, equipmentId, creatureId) !== null) return false
+  const equipment = state.cards[equipmentId]
+  const cost = equipment.def.attach?.equipCost ?? "{0}"
+
+  if (costTotal(parseCost(cost)) > 0) {
+    if (!autoTapFor(state, equipment.controller, cost)) return false
+    const player = state.players[equipment.controller]
+    const paid = payFrom(player.pool, parseCost(cost))
+    if (paid === null) return false
+    player.pool = paid
+  }
+
+  equipment.attachedTo = creatureId
+  log(
+    state,
+    `${equipment.def.name} is attached to ${state.cards[creatureId].def.name}`
+  )
+  return true
+}
+
+/** Attaches an Aura as it resolves. Auras do not move once attached. */
+export function attachAura(state: GameState, auraId: number, creatureId: number): boolean {
+  const aura = state.cards[auraId]
+  const creature = state.cards[creatureId]
+  if (!aura || !creature) return false
+  if (creature.zone !== "battlefield") return false
+  aura.attachedTo = creatureId
+  log(state, `${aura.def.name} enchants ${creature.def.name}`)
+  return true
+}

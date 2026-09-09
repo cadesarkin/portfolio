@@ -8,7 +8,7 @@
  */
 
 import { isPermanent } from "./cards"
-import { matches, toughnessOf } from "./continuous"
+import { canTarget, matches, toughnessOf } from "./continuous"
 import { applyEffect, type EffectContext } from "./effects"
 import { battlefield, log, moveCard, opponentOf } from "./state"
 import type {
@@ -44,7 +44,9 @@ function eventMatches(
       if (trigger.who === "self") return event.card.id === source.id
       return event.card.id !== source.id && matches(event.card, trigger.filter, source)
     case "dies":
-      return event.type === "dies" && event.card.id === source.id
+      if (event.type !== "dies") return false
+      if (trigger.who === "attached") return source.attachedTo === event.card.id
+      return event.card.id === source.id
     case "attacks":
       if (event.type !== "attacks") return false
       if (trigger.who === "self") return event.card.id === source.id
@@ -111,6 +113,8 @@ function autoTargets(state: GameState, source: GameCard, effects: Effect[]): Tar
     const wantOwn = spec.controller !== "opponent"
     const pool = battlefield(state).filter((c) => {
       if (spec.what === "creature" && !c.def.types.includes("Creature")) return false
+      // Hexproof stops an opponent's ability choosing it, the same as a spell.
+      if (!canTarget(state, c, source.controller)) return false
       return wantOwn ? c.controller === source.controller : c.controller !== source.controller
     })
     const pick = pool.sort((a, b) => (b.def.power ?? 0) - (a.def.power ?? 0))[0]
@@ -149,6 +153,13 @@ export function resolveTop(state: GameState): boolean {
       source.sick = true
       source.tapped = source.def.entersTapped
       log(state, `${source.def.name} enters`)
+      if (source.def.attach?.kind === "aura") {
+        const target = item.targets.find((t) => t.kind === "card")
+        if (target && target.kind === "card") {
+          source.attachedTo = target.id
+          log(state, `${source.def.name} enchants ${state.cards[target.id]?.def.name ?? "it"}`)
+        }
+      }
       for (const effect of item.effects) applyEffect(ctx, effect)
       checkTriggers(state, { type: "enters", card: source })
       if (source.def.types.includes("Land")) {
@@ -195,6 +206,21 @@ export function stateBasedActions(state: GameState): void {
     if (lethal && !indestructible) {
       log(state, `${card.def.name} dies`)
       checkTriggers(state, { type: "dies", card })
+      moveCard(state, card.id, "graveyard")
+    }
+  }
+
+  /* An Equipment attached to something that is no longer a creature on the
+     battlefield falls off; an Aura with nothing to enchant is put into the
+     graveyard. Without this a dead creature keeps handing out its buffs. */
+  for (const card of battlefield(state)) {
+    if (card.attachedTo === null) continue
+    const host = state.cards[card.attachedTo]
+    const valid = host && host.zone === "battlefield" && host.def.types.includes("Creature")
+    if (valid) continue
+    card.attachedTo = null
+    if (card.def.attach?.kind === "aura") {
+      log(state, `${card.def.name} has nothing to enchant`)
       moveCard(state, card.id, "graveyard")
     }
   }

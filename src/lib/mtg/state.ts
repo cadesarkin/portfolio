@@ -56,6 +56,7 @@ function newCard(id: number, def: CardDef, owner: PlayerId, zone: Zone): GameCar
     addedSubtypes: [],
     attacking: false,
     blocking: null,
+    attachedTo: null,
     token: false,
     castCount: 0,
   }
@@ -110,6 +111,7 @@ export function createGame(
     turn: 1,
     stack: [],
     winner: null,
+    preventCombatDamage: false,
     log: [],
     nextId: 1,
     seed,
@@ -193,6 +195,19 @@ export function moveCard(state: GameState, cardId: number, to: Zone): void {
     }
   }
 
+  /* Anything attached to this card comes off. An Aura goes with its creature
+     to the graveyard; an Equipment stays on the battlefield, unattached, which
+     is the difference between the two. */
+  if (card.zone === "battlefield" && to !== "battlefield") {
+    for (const other of Object.values(state.cards)) {
+      if (other.attachedTo !== cardId) continue
+      other.attachedTo = null
+      if (other.def.attach?.kind === "aura" && other.zone === "battlefield") {
+        moveCard(state, other.id, "graveyard")
+      }
+    }
+  }
+
   if (card.token && to !== "battlefield") {
     card.zone = "exile"
     delete state.cards[cardId]
@@ -209,6 +224,7 @@ export function moveCard(state: GameState, cardId: number, to: Zone): void {
     card.addedSubtypes = []
     card.attacking = false
     card.blocking = null
+    card.attachedTo = null
     card.controller = card.owner
   }
 

@@ -117,6 +117,8 @@ export interface CardDef {
   abilities: Ability[]
   /** Arrives on the battlefield tapped. */
   entersTapped: boolean
+  /** Equipment and Auras attach to a creature rather than standing alone. */
+  attach?: Attachment
   encoded: Encoded
   rarity: string
   set: string
@@ -132,6 +134,12 @@ export type Encoded =
   | "body"
   /** It has no rules text to encode. */
   | "vanilla"
+
+export interface Attachment {
+  kind: "equipment" | "aura"
+  /** What it costs to move an Equipment onto a creature. Auras cannot move. */
+  equipCost?: string
+}
 
 /* ── Abilities ────────────────────────────────────────────────────────── */
 
@@ -154,6 +162,8 @@ export type TriggerEvent =
   | { when: "enters"; who: "self" }
   | { when: "enters"; who: "other"; filter: Filter }
   | { when: "dies"; who: "self" }
+  /** The creature this Equipment or Aura is attached to died. */
+  | { when: "dies"; who: "attached" }
   | { when: "attacks"; who: "self" }
   | { when: "attacks"; who: "other"; filter: Filter }
   | { when: "upkeep"; controller: "you" }
@@ -195,6 +205,8 @@ export type Effect =
   | { do: "reanimate"; who: PlayerSpec }
   /** Search the library for a card matching the filter and take it to hand. */
   | { do: "tutor"; filter: Filter; to: "hand" | "battlefield" }
+  /** No combat damage is dealt for the rest of the turn. */
+  | { do: "preventCombatDamage" }
   /** Text the engine does not run. Present so the card can say so. */
   | { do: "unimplemented"; note: string }
 
@@ -233,6 +245,9 @@ export interface Filter {
 export type StaticEffect =
   | { kind: "buff"; filter: Filter; power: number; toughness: number }
   | { kind: "grant"; filter: Filter; keyword: Keyword }
+  /** Applies only to the creature this permanent is attached to. */
+  | { kind: "equippedBuff"; power: number; toughness: number }
+  | { kind: "equippedGrant"; keyword: Keyword }
 
 /* ── Objects in play ──────────────────────────────────────────────────── */
 
@@ -258,6 +273,8 @@ export interface GameCard {
   addedSubtypes: string[]
   attacking: boolean
   blocking: number | null
+  /** The creature this Equipment or Aura is attached to. */
+  attachedTo: number | null
   /** True for a token, which ceases to exist when it leaves the battlefield. */
   token: boolean
   /** Commander cast count, for the tax. */
@@ -307,6 +324,8 @@ export interface GameState {
   stack: StackItem[]
   /** Set once someone has won. */
   winner: PlayerId | null
+  /** Set by a Fog effect: no combat damage is dealt this turn. */
+  preventCombatDamage: boolean
   /** A running account of what happened, newest last. */
   log: LogEntry[]
   nextId: number

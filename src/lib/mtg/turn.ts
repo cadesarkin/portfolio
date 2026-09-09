@@ -79,6 +79,7 @@ export function advance(state: GameState): void {
       break
 
     case "cleanup": {
+      state.preventCombatDamage = false
       // Damage wears off and until-end-of-turn effects fall away.
       for (const card of battlefield(state)) {
         card.damage = 0

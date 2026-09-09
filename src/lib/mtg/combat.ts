@@ -113,6 +113,11 @@ const blockersFor = (state: GameState, attacker: GameCard): GameCard[] =>
  * regular pass, which is the whole point of the keyword.
  */
 export function combatDamage(state: GameState): void {
+  // Fog and its like: the step still happens, but nothing is dealt.
+  if (state.preventCombatDamage) {
+    log(state, "no combat damage is dealt")
+    return
+  }
   const defender = opponentOf(state.active)
 
   const firstStrikers = attackersOf(state).concat(

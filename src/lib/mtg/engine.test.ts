@@ -35,6 +35,7 @@ function put(state: GameState, name: string, controller: 0 | 1, ready = true): G
     addedSubtypes: [],
     attacking: false,
     blocking: null,
+    attachedTo: null,
     token: false,
     castCount: 0,
   }

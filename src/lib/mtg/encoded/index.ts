@@ -10,10 +10,12 @@
  * text is inert. Cards are added here over time; nothing breaks by being absent.
  */
 
-import type { Ability } from "../types"
+import type { Ability, Attachment } from "../types"
 
 export interface EncodedCard {
   abilities: Ability[]
+  /** Equipment and Auras: what the card attaches to, and what moving it costs. */
+  attach?: Attachment
 }
 
 /** Shorthands, so an entry reads close to the card it encodes. */
@@ -592,11 +594,18 @@ export const ENCODED: Record<string, EncodedCard> = {
   /* ── Graveyard and library ──────────────────────────────────────────── */
 
   "Animate Dead": {
+    // A real Aura: it attaches to the creature it brings back, and follows it
+    // to the graveyard. What it does not do is take the creature with it when
+    // the Aura is the one destroyed.
+    attach: { kind: "aura" },
     abilities: [
       {
         kind: "triggered",
         on: { when: "enters", who: "self" },
-        effects: [{ do: "reanimate", who: "each" }],
+        effects: [
+          { do: "reanimate", who: "each" },
+          { do: "unimplemented", note: "the creature does not leave when this Aura does" },
+        ],
       },
     ],
   },
@@ -632,6 +641,63 @@ export const ENCODED: Record<string, EncodedCard> = {
         effects: [
           { do: "tutor", filter: { types: ["Creature"] }, to: "battlefield" },
           { do: "unimplemented", note: "limited by X" },
+        ],
+      },
+    ],
+  },
+
+  /* ── Equipment ──────────────────────────────────────────────────────── */
+
+  "Lightning Greaves": {
+    attach: { kind: "equipment", equipCost: "{0}" },
+    abilities: [
+      { kind: "static", effect: { kind: "equippedGrant", keyword: "haste" } },
+      // Shroud stops everyone targeting it; hexproof stops opponents. The
+      // engine has hexproof, and the difference only matters when you want to
+      // target your own creature, which is the rarer case.
+      { kind: "static", effect: { kind: "equippedGrant", keyword: "hexproof" } },
+    ],
+  },
+
+  "Swiftfoot Boots": {
+    attach: { kind: "equipment", equipCost: "{1}" },
+    abilities: [
+      { kind: "static", effect: { kind: "equippedGrant", keyword: "hexproof" } },
+      { kind: "static", effect: { kind: "equippedGrant", keyword: "haste" } },
+    ],
+  },
+
+  Skullclamp: {
+    attach: { kind: "equipment", equipCost: "{1}" },
+    abilities: [
+      { kind: "static", effect: { kind: "equippedBuff", power: 1, toughness: -1 } },
+      {
+        kind: "triggered",
+        on: { when: "dies", who: "attached" },
+        effects: [{ do: "draw", amount: 2, who: "you" }],
+      },
+    ],
+  },
+
+  /* ── Damage prevention ──────────────────────────────────────────────── */
+
+  Fog: {
+    abilities: [{ kind: "spell", effects: [{ do: "preventCombatDamage" }] }],
+  },
+
+  /* ── Protection ─────────────────────────────────────────────────────── */
+
+  "Legolas's Quick Reflexes": {
+    // Split second is dropped: the card is played to protect a creature, and
+    // that half works. What it cannot do is stop a response.
+    abilities: [
+      {
+        kind: "spell",
+        effects: [
+          { do: "untap", target: yourCreature },
+          { do: "grant", keyword: "hexproof", target: yourCreature, until: "eot" },
+          { do: "grant", keyword: "indestructible", target: yourCreature, until: "eot" },
+          { do: "unimplemented", note: "split second" },
         ],
       },
     ],

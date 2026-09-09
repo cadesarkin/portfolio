@@ -16,6 +16,7 @@ import {
   type Ability,
   type CardDef,
   type Colour,
+  type Attachment,
   type Encoded,
   type Keyword,
   type ManaSymbol,
@@ -145,10 +146,12 @@ function build(c: RawCard): CardDef {
   let abilities: Ability[]
   let encoded: Encoded
   let entersTapped = false
+  let attach: Attachment | undefined
 
   if (hand) {
     abilities = [...derived, ...hand.abilities]
     encoded = abilities.some(hasUnimplemented) ? "partial" : "full"
+    attach = hand.attach
   } else {
     const auto = autoEncode(c.text ?? "", c.name, permanent, keywords)
     abilities = [...derived, ...auto.abilities]
@@ -182,6 +185,7 @@ function build(c: RawCard): CardDef {
     produces: parseProduces(c.produces),
     abilities,
     entersTapped,
+    attach,
     // A printed `*` means the value comes from the board, which is not computed.
     encoded: hasStar(c) ? "partial" : encoded,
     rarity: c.rarity ?? "common",

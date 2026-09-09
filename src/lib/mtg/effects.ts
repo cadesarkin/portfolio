@@ -147,6 +147,7 @@ export function createToken(
     addedSubtypes: [],
     attacking: false,
     blocking: null,
+    attachedTo: null,
     token: true,
     castCount: 0,
   }
@@ -340,6 +341,9 @@ export function applyEffect(ctx: EffectContext, effect: Effect): void {
       best.controller = ctx.controller
       moveCard(state, best.id, "battlefield")
       best.sick = true
+      // An Aura that brings a creature back attaches itself to it, so the two
+      // are linked: when the creature dies, the Aura goes with it.
+      if (ctx.source?.def.attach?.kind === "aura") ctx.source.attachedTo = best.id
       log(state, `${best.def.name} returns to the battlefield`)
       break
     }
@@ -366,6 +370,12 @@ export function applyEffect(ctx: EffectContext, effect: Effect): void {
         player.hand.push(id)
         log(state, `${card.def.name} is found`)
       }
+      break
+    }
+
+    case "preventCombatDamage": {
+      state.preventCombatDamage = true
+      log(state, "combat damage is prevented this turn")
       break
     }
 

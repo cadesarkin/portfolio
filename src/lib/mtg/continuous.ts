@@ -46,6 +46,19 @@ function staticModifiers(state: GameState, card: GameCard): Modifiers {
     for (const ability of source.def.abilities) {
       if (ability.kind !== "static") continue
       const effect = ability.effect
+
+      // Equipment and Auras act only on what they are attached to.
+      if (effect.kind === "equippedBuff" || effect.kind === "equippedGrant") {
+        if (source.attachedTo !== card.id) continue
+        if (effect.kind === "equippedBuff") {
+          mod.power += effect.power
+          mod.toughness += effect.toughness
+        } else if (!mod.keywords.includes(effect.keyword)) {
+          mod.keywords.push(effect.keyword)
+        }
+        continue
+      }
+
       if (!matches(card, effect.filter, source)) continue
       if (effect.kind === "buff") {
         mod.power += effect.power
@@ -57,6 +70,22 @@ function staticModifiers(state: GameState, card: GameCard): Modifiers {
   }
   return mod
 }
+
+/**
+ * Whether `card` may be chosen as a target by `byController`.
+ *
+ * Hexproof is the reason the protection spells in these decks exist; without
+ * this it was a word printed on a card that changed nothing.
+ */
+export function canTarget(state: GameState, card: GameCard, byController: 0 | 1): boolean {
+  if (card.zone !== "battlefield") return false
+  if (card.controller === byController) return true
+  return !hasKeyword(state, card, "hexproof")
+}
+
+/** Everything currently attached to a permanent. */
+export const attachmentsOf = (state: GameState, card: GameCard): GameCard[] =>
+  battlefield(state).filter((c) => c.attachedTo === card.id)
 
 /** Counters that do more than sit there. */
 const COUNTER_KEYWORDS: Record<string, Keyword> = {

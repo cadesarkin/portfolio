@@ -4,8 +4,15 @@ import { useCallback, useRef, useState } from "react"
 import { Cost } from "./CardFace"
 import { DECKS, cardDef } from "@/lib/mtg/cards"
 import { createGame } from "@/lib/mtg/state"
-import { canCast, canPlayLand, castSpell, playLand } from "@/lib/mtg/actions"
-import { powerOf, toughnessOf, keywordsOf } from "@/lib/mtg/continuous"
+import { canCast, canEquip, canPlayLand, castSpell, equip, playLand } from "@/lib/mtg/actions"
+import {
+  attachmentsOf,
+  canTarget,
+  hasKeyword,
+  keywordsOf,
+  powerOf,
+  toughnessOf,
+} from "@/lib/mtg/continuous"
 import { canAttack, canBlock } from "@/lib/mtg/combat"
 import {
   AI,
@@ -38,6 +45,10 @@ export default function Duel() {
   const [attackers, setAttackers] = useState<number[]>([])
   const [blocks, setBlocks] = useState<Record<number, number>>({})
   const [picking, setPicking] = useState<number | null>(null)
+  /** The attacker blockers are currently being assigned to. */
+  const [blockTarget, setBlockTarget] = useState<number | null>(null)
+  /** The Equipment waiting to be put on a creature. */
+  const [equipping, setEquipping] = useState<number | null>(null)
   const [inspect, setInspect] = useState<GameCard | null>(null)
   const seed = useRef(Math.floor(Math.random() * 100000))
 
@@ -87,6 +98,8 @@ export default function Duel() {
 
   const castAt = (target: GameCard) => {
     if (picking === null) return
+    // Hexproof stops the choice being made at all, rather than fizzling later.
+    if (!canTarget(state, target, HUMAN)) return
     castSpell(state, picking, [{ kind: "card", id: target.id }])
     setPicking(null)
     commit(state, runUntilPlayer(state))
@@ -97,20 +110,31 @@ export default function Duel() {
     setAttackers((a) => (a.includes(card.id) ? a.filter((x) => x !== card.id) : [...a, card.id]))
   }
 
-  const toggleBlock = (blocker: GameCard) => {
-    const incoming = Object.values(state.cards).filter((c) => c.attacking)
-    const current = blocks[blocker.id]
-    const legal = incoming.filter((a) => canBlock(state, blocker, a))
-    if (legal.length === 0) return
-    // Click cycles through the attackers this creature could block, then off.
-    const i = current === undefined ? -1 : legal.findIndex((a) => a.id === current)
-    const nextTarget = legal[i + 1]
+  /**
+   * Blocks are assigned by picking an attacker, then clicking the creatures
+   * that should block it.
+   *
+   * Cycling a blocker through the attackers on each click could never express
+   * two creatures blocking one attacker, which is exactly what menace demands.
+   */
+  const toggleBlocker = (blocker: GameCard) => {
+    if (blockTarget === null) return
+    const attacker = state.cards[blockTarget]
+    if (!attacker || !canBlock(state, blocker, attacker)) return
     setBlocks((b) => {
       const out = { ...b }
-      if (nextTarget) out[blocker.id] = nextTarget.id
-      else delete out[blocker.id]
+      if (out[blocker.id] === blockTarget) delete out[blocker.id]
+      else out[blocker.id] = blockTarget
       return out
     })
+  }
+
+  const doEquip = (creature: GameCard) => {
+    if (equipping === null) return
+    if (canEquip(state, equipping, creature.id) !== null) return
+    equip(state, equipping, creature.id)
+    setEquipping(null)
+    commit(state, waiting)
   }
 
   const confirmAttack = () => {
@@ -121,7 +145,17 @@ export default function Duel() {
   const confirmBlocks = () => {
     commit(state, playerBlocks(state, blocks))
     setBlocks({})
+    setBlockTarget(null)
   }
+
+  /** How many creatures are set to block a given attacker. */
+  const blockersOn = (attackerId: number): number =>
+    Object.values(blocks).filter((id) => id === attackerId).length
+
+  /** An attacker with menace needs two blockers or the block is thrown away. */
+  const illegalBlocks = Object.values(state.cards)
+    .filter((c) => c.attacking && hasKeyword(state, c, "menace"))
+    .filter((c) => blockersOn(c.id) === 1)
 
   const pass = () => commit(state, passPhase(state))
 
@@ -141,8 +175,29 @@ export default function Duel() {
         <Battlefield
           state={state}
           cards={cards(them.battlefield)}
-          onClick={(c) => (picking !== null ? castAt(c) : setInspect(c))}
-          highlight={(c) => (c.attacking ? "#e07a63" : picking !== null ? "#d8b25e" : null)}
+          onClick={(c) => {
+            if (picking !== null) return castAt(c)
+            if (waiting.for === "player-blockers" && c.attacking) {
+              return setBlockTarget((t) => (t === c.id ? null : c.id))
+            }
+            setInspect(c)
+          }}
+          highlight={(c) =>
+            blockTarget === c.id
+              ? "#ffd166"
+              : c.attacking
+                ? "#e07a63"
+                : picking !== null && canTarget(state, c, HUMAN)
+                  ? "#d8b25e"
+                  : null
+          }
+          badge={(c) => {
+            if (!c.attacking) return null
+            const n = blockersOn(c.id)
+            const menace = hasKeyword(state, c, "menace")
+            if (n === 0) return menace ? "menace" : null
+            return menace && n === 1 ? `${n} — needs 2` : `blocked by ${n}`
+          }}
           onInspect={setInspect}
         />
 
@@ -169,10 +224,14 @@ export default function Duel() {
               : waiting.for === "player-attackers"
                 ? "choose attackers"
                 : waiting.for === "player-blockers"
-                  ? "choose blocks"
-                  : picking !== null
-                    ? "choose a target"
-                    : "your move"}
+                  ? blockTarget === null
+                    ? "click an attacker to block it"
+                    : `blocking ${state.cards[blockTarget]?.def.name} — click your creatures`
+                  : equipping !== null
+                    ? "click a creature to equip it"
+                    : picking !== null
+                      ? "choose a target"
+                      : "your move"}
           </span>
         </div>
 
@@ -181,18 +240,31 @@ export default function Duel() {
           state={state}
           cards={cards(me.battlefield)}
           onClick={(c) => {
+            if (equipping !== null) return doEquip(c)
             if (picking !== null) return castAt(c)
             if (waiting.for === "player-attackers") return toggleAttacker(c)
-            if (waiting.for === "player-blockers") return toggleBlock(c)
+            if (waiting.for === "player-blockers") return toggleBlocker(c)
+            if (c.def.attach?.kind === "equipment") return setEquipping(c.id)
             setInspect(c)
           }}
           highlight={(c) =>
-            attackers.includes(c.id)
-              ? "#8fe0a0"
-              : blocks[c.id] !== undefined
-                ? "#7fb4e0"
-                : null
+            equipping === c.id
+              ? "#d8b25e"
+              : attackers.includes(c.id)
+                ? "#8fe0a0"
+                : blocks[c.id] !== undefined
+                  ? "#7fb4e0"
+                  : null
           }
+          badge={(c) => {
+            const blocking = blocks[c.id]
+            if (blocking !== undefined) {
+              return `blocks ${state.cards[blocking]?.def.name.split(",")[0].split(" ")[0] ?? ""}`
+            }
+            if (c.attachedTo !== null) return "equipped"
+            const worn = attachmentsOf(state, c)
+            return worn.length ? `+${worn.length} equip` : null
+          }}
           onInspect={setInspect}
         />
         <PlayerBar
@@ -263,21 +335,50 @@ export default function Duel() {
               {attackers.length ? `attack with ${attackers.length}` : "no attacks"}
             </button>
           ) : waiting.for === "player-blockers" ? (
-            <button type="button" className="seg on-dark" onClick={confirmBlocks}>
-              {Object.keys(blocks).length ? `confirm ${Object.keys(blocks).length} blocks` : "no blocks"}
-            </button>
+            <>
+              <button
+                type="button"
+                className="seg on-dark"
+                onClick={confirmBlocks}
+                disabled={illegalBlocks.length > 0}
+                title={
+                  illegalBlocks.length > 0
+                    ? `${illegalBlocks[0].def.name} has menace and needs two blockers`
+                    : undefined
+                }
+              >
+                {Object.keys(blocks).length
+                  ? `confirm ${Object.keys(blocks).length} blocks`
+                  : "no blocks"}
+              </button>
+              {illegalBlocks.length > 0 && (
+                <span style={{ fontSize: 11, color: "#e07a63" }}>
+                  {illegalBlocks[0].def.name} has menace — two blockers or none
+                </span>
+              )}
+            </>
           ) : (
             <button type="button" className="seg on-dark" onClick={pass}>
               next phase
             </button>
           )}
-          {picking !== null && (
-            <button type="button" className="seg on-dark" onClick={() => setPicking(null)}>
+          {(picking !== null || equipping !== null || blockTarget !== null) && (
+            <button
+              type="button"
+              className="seg on-dark"
+              onClick={() => {
+                setPicking(null)
+                setEquipping(null)
+                setBlockTarget(null)
+              }}
+            >
               cancel
             </button>
           )}
           <span style={{ marginLeft: "auto", fontSize: 11, color: "#6f6688" }}>
-            click a card to play it · click a creature to inspect
+            {waiting.for === "player-blockers"
+              ? "pick an attacker, then the creatures that block it"
+              : "click a card to play it · right-click to inspect"}
           </span>
         </div>
       </div>
@@ -385,19 +486,21 @@ function Battlefield({
   cards,
   onClick,
   highlight,
+  badge,
   onInspect,
 }: {
   state: GameState
   cards: GameCard[]
   onClick: (c: GameCard) => void
   highlight: (c: GameCard) => string | null
+  badge?: (c: GameCard) => string | null
   onInspect: (c: GameCard) => void
 }) {
   const lands = cards.filter((c) => c.def.types.includes("Land"))
   const rest = cards.filter((c) => !c.def.types.includes("Land"))
   return (
     <div style={{ flex: "1 1 auto", minHeight: 96, padding: "6px 10px", overflowY: "auto" }}>
-      <Row cards={rest} state={state} onClick={onClick} highlight={highlight} onInspect={onInspect} />
+      <Row cards={rest} state={state} onClick={onClick} highlight={highlight} badge={badge} onInspect={onInspect} />
       <Row cards={lands} state={state} onClick={onClick} highlight={highlight} onInspect={onInspect} small />
     </div>
   )
@@ -408,6 +511,7 @@ function Row({
   state,
   onClick,
   highlight,
+  badge,
   onInspect,
   small,
 }: {
@@ -415,6 +519,7 @@ function Row({
   state: GameState
   onClick: (c: GameCard) => void
   highlight: (c: GameCard) => string | null
+  badge?: (c: GameCard) => string | null
   onInspect: (c: GameCard) => void
   small?: boolean
 }) {
@@ -428,6 +533,7 @@ function Row({
           state={state}
           small={small}
           outline={highlight(c)}
+          badge={badge?.(c) ?? null}
           onClick={() => onClick(c)}
           onInspect={() => onInspect(c)}
         />
@@ -441,6 +547,7 @@ function Permanent({
   state,
   small,
   outline,
+  badge,
   onClick,
   onInspect,
 }: {
@@ -448,6 +555,7 @@ function Permanent({
   state: GameState
   small?: boolean
   outline: string | null
+  badge?: string | null
   onClick: () => void
   onInspect: () => void
 }) {
@@ -502,6 +610,18 @@ function Permanent({
       {kws.length > 0 && (
         <div style={{ fontSize: 8, color: "#9c92b8", marginTop: 1, lineHeight: 1.2 }}>
           {kws.slice(0, 3).join(" ")}
+        </div>
+      )}
+      {badge && (
+        <div
+          style={{
+            fontSize: 8,
+            marginTop: 1,
+            lineHeight: 1.2,
+            color: badge.includes("needs") ? "#e07a63" : "#7fb4e0",
+          }}
+        >
+          {badge}
         </div>
       )}
     </button>

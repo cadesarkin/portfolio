@@ -6,7 +6,7 @@
  * the player's turn wherever there is a decision to make.
  */
 
-import { aiCastSpells, aiDeclareAttackers, aiDeclareBlockers, aiPlayLand } from "./ai"
+import { aiCastSpells, aiDeclareAttackers, aiDeclareBlockers, aiEquip, aiPlayLand } from "./ai"
 import { declareAttackers, declareBlockers } from "./combat"
 import { stateBasedActions } from "./stack"
 import { advance } from "./turn"
@@ -44,6 +44,7 @@ export function runUntilPlayer(state: GameState, limit = 400): Waiting {
       if (state.phase === "main1") {
         aiPlayLand(state, AI)
         aiCastSpells(state, AI)
+        aiEquip(state, AI)
         advance(state)
         continue
       }
@@ -111,6 +112,7 @@ export function selfPlay(state: GameState, maxTurns = 60): GameState {
       case "main1":
         aiPlayLand(state, me)
         aiCastSpells(state, me)
+        aiEquip(state, me)
         break
       case "declareAttackers":
         aiDeclareAttackers(state, me)

@@ -90,11 +90,11 @@ Measured by the tests, written out to `playability-report.txt` and
 `coverage-report.txt` on every run:
 
 ```
-bears    100 cards: 34/34 lands make mana, 29 creatures have bodies, 22/37 other spells do something
-jetmir   100 cards: 34/35 lands make mana, 26 creatures have bodies, 24/39 other spells do something
-kaalia   100 cards: 36/36 lands make mana, 25 creatures have bodies, 22/39 other spells do something
+bears    100 cards: 34/34 lands make mana, 29 creatures have bodies, 24/37 other spells do something
+jetmir   100 cards: 34/35 lands make mana, 26 creatures have bodies, 25/39 other spells do something
+kaalia   100 cards: 36/36 lands make mana, 25 creatures have bodies, 24/39 other spells do something
 
-text coverage over the pool: 43 full, 60 partial, 124 body only
+text coverage over the pool: 46 full, 62 partial, 119 body only
 ```
 
 So: the mana bases work completely, every creature is a real body that attacks
@@ -103,6 +103,21 @@ when they resolve. The remaining four in ten are the honest weak spot and the
 number to keep pushing on. `coverage-report.txt` ranks the unparsed sentences by
 how often they occur, which is how the next batch gets picked — by evidence
 rather than by guesswork.
+
+## Attachments
+
+Equipment and Auras both attach to a creature, and the difference between them
+is what happens when that creature dies: an Equipment falls off and stays on the
+battlefield, an Aura goes to the graveyard with it. Both are cleaned up by
+state-based actions, so a dead creature can never keep handing out its buffs.
+
+Equipping is a sorcery-speed activated ability with its own mana cost. Auras
+attach as they resolve, to whatever the spell targeted.
+
+Hexproof went in at the same time and for the same reason: it was parsed as a
+keyword and checked by nothing, so every protection card in these decks was
+decorative. Targeting now goes through `canTarget`, which the UI, the AI and
+automatic ability targeting all use.
 
 ## Hard-won details
 
