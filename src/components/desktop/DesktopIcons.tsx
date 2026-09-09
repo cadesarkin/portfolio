@@ -14,7 +14,9 @@ interface Props {
 export default function DesktopIcons({ isMobile, revealed }: Props) {
   const { open } = useWindows()
   const listRef = useRef<HTMLDivElement>(null)
-  const items = root.children
+  // Hidden nodes stay in the filesystem for the terminal but keep off the
+  // desktop — the crash site is found on the plains, not in a list.
+  const items = root.children.filter((n) => !n.hidden)
 
   const activate = (node: VNode) => {
     if (node.kind === "link") {

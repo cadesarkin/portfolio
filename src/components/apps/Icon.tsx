@@ -226,6 +226,29 @@ function Trophy() {
   )
 }
 
+function StarmapIcon() {
+  return (
+    <>
+      <rect x="1" y="2" width="14" height="12" fill="#0b1226" />
+      <circle cx="4.5" cy="5" r="0.8" fill="#dbe9f5" />
+      <circle cx="11" cy="4" r="0.8" fill="#dbe9f5" />
+      <circle cx="8" cy="9.5" r="0.8" fill="#dbe9f5" />
+      <circle cx="12.5" cy="11" r="0.8" fill="#dbe9f5" />
+      <path d="M4.5 5L11 4M11 4L8 9.5M8 9.5L12.5 11" stroke="#5b8fd6" strokeWidth="0.7" fill="none" />
+      <path d="M6 12l1.6-2.4L9.2 12z" fill="#ffd166" />
+      <rect
+        x="1"
+        y="2"
+        width="14"
+        height="12"
+        fill="none"
+        stroke={OUTLINE}
+        strokeWidth="1"
+      />
+    </>
+  )
+}
+
 const SHAPES: Record<IconKey, () => React.JSX.Element> = {
   folder: Folder,
   file: Doc,
@@ -239,6 +262,7 @@ const SHAPES: Record<IconKey, () => React.JSX.Element> = {
   paint: Paint,
   music: Music,
   trophy: Trophy,
+  starmap: StarmapIcon,
 }
 
 export function Icon({ name, size = 16 }: { name: IconKey; size?: number }) {

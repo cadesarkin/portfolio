@@ -7,6 +7,7 @@ import DesktopIcons from "./DesktopIcons"
 import Taskbar from "./Taskbar"
 import Screensaver from "./Screensaver"
 import DesktopSprites from "./DesktopSprites"
+import CrashSite from "./CrashSite"
 import { SpriteProvider } from "./sprites-context"
 import Window from "./Window"
 import { WindowProvider, useWindows } from "./window-manager"
@@ -87,6 +88,7 @@ function Shell({ booted, onReboot }: { booted: boolean; onReboot: () => void }) 
         </Window>
       ))}
       <DesktopSprites />
+      <CrashSite isMobile={isMobile} />
       <Taskbar />
       <Screensaver enabled={booted} />
     </>

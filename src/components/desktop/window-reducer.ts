@@ -68,6 +68,7 @@ const SIZES: Partial<Record<AppKey, { w: number; h: number }>> = {
   paint: { w: 700, h: 640 },
   music: { w: 520, h: 420 },
   leaderboard: { w: 620, h: 660 },
+  starmap: { w: 860, h: 620 },
 }
 
 const DEFAULT_SIZE = { w: 720, h: 480 }

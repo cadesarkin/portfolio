@@ -422,6 +422,15 @@ export const root: VDir = {
     },
     {
       kind: "app",
+      name: "starmap",
+      app: "starmap",
+      icon: "starmap",
+      desc: "recovered from the crash site on the plains",
+      // Found in the world, not launched from the desktop. See CrashSite.
+      hidden: true,
+    },
+    {
+      kind: "app",
       name: "leaderboard",
       app: "leaderboard",
       icon: "trophy",

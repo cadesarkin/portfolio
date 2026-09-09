@@ -13,6 +13,13 @@
 
 import { useEffect, useRef } from "react"
 import { SKY_RAMP, GRASS_RAMP } from "@/lib/bliss-palette"
+import {
+  createAmbient,
+  stepAmbient,
+  birdGlyph,
+  starCells,
+  type Ambient,
+} from "@/lib/ambient"
 import { WALLPAPER, type RGB, type Theme } from "@/lib/theme"
 import {
   DEFAULT_SETTINGS,
@@ -28,6 +35,14 @@ interface Props {
 
 /** Seconds for a full day/night crossfade. */
 const FADE = 0.9
+
+/**
+ * Impact crater in the plains, in normalised screen coordinates.
+ *
+ * Exported so the crash-site hotspot can sit exactly on it rather than being
+ * positioned by eye and drifting apart from the terrain on resize.
+ */
+export const CRATER = { x: 0.8, y: 0.87, r: 0.115 }
 
 export default function BlissCanvas({
   paused = false,
@@ -155,6 +170,9 @@ export default function BlissCanvas({
       )
     }
 
+    // Debris rather than grass blades inside the crater.
+    const RUBBLE_RAMP = " ..:-=*o0O#"
+
     const DAY = WALLPAPER.day
     const NIGHT = WALLPAPER.night
 
@@ -190,6 +208,8 @@ export default function BlissCanvas({
     let oG = 0
     let oB = 0
     let oCh = " "
+    /** 1 inside the impact site, 0 outside. Swaps the glyph ramp for rubble. */
+    let crater = 0
 
     function shade(x: number, y: number) {
       const hy = hillY(x)
@@ -268,6 +288,22 @@ export default function BlissCanvas({
 
         let lum = 0.58 + 0.22 * (rip - 0.5) + 0.34 * (patch - 0.5)
         lum *= lerp(1.12, 0.66, depth)
+
+        // The impact site: scorched inside, with a raised lip of thrown-up
+        // earth around it. Measured in screen space and corrected for aspect,
+        // so it stays round rather than stretching with the window.
+        const cdx = (x - CRATER.x) * AR
+        const cdy = y - CRATER.y
+        const cd = Math.sqrt(cdx * cdx + cdy * cdy) / (CRATER.r * AR)
+        if (cd < 1.35) {
+          // Burnt floor.
+          lum *= lerp(0.28, 1, ss(0.35, 1.0, cd))
+          // Bright rim just outside the bowl.
+          lum += 0.34 * Math.exp(-Math.pow((cd - 1.0) / 0.13, 2))
+          crater = 1 - ss(0.9, 1.3, cd)
+        } else {
+          crater = 0
+        }
         // Rim light along the crest.
         lum += 0.3 * Math.exp(-Math.pow(dy / 0.03, 2))
         if (lum < 0) lum = 0
@@ -278,9 +314,8 @@ export default function BlissCanvas({
         oB = lerp(hill0[2], hill1[2], lum)
         // Same flip as the sky.
         const gd = lerp(1 - lum, lum, nightMix)
-        oCh = GRASS_RAMP.charAt(
-          Math.round((0.28 + 0.66 * gd) * (GRASS_RAMP.length - 1))
-        )
+        const ramp = crater > 0.5 ? RUBBLE_RAMP : GRASS_RAMP
+        oCh = ramp.charAt(Math.round((0.28 + 0.66 * gd) * (ramp.length - 1)))
       }
     }
 
@@ -389,6 +424,67 @@ export default function BlissCanvas({
       rowFg = new Int32Array(cols)
       rowBg = new Int32Array(cols)
       rowCh = new Array(cols)
+
+      // The flock is placed in grid units, so it has to be laid out again
+      // whenever the grid changes shape.
+      ambient = createAmbient(cols, rows)
+    }
+
+    let ambient: Ambient = createAmbient(1, 1)
+    let ambientT = 0
+
+    /**
+     * Birds and meteors, drawn on top of the finished scene.
+     *
+     * A separate pass rather than being folded into the row loop: there are
+     * only a handful of glyphs, and threading them through the run-length
+     * batching would cost more than drawing them directly.
+     */
+    function drawAmbient() {
+      const night = nightMix > 0.5
+
+      if (!night) {
+        for (const b of ambient.birds) {
+          const col = Math.round(b.x)
+          const row = Math.round(b.y)
+          if (col < 0 || row < 0 || col >= cols || row >= rows) continue
+          ctx!.fillStyle = "rgba(28, 42, 58, 0.72)"
+          ctx!.fillText(birdGlyph(b, ambientT), col * cw, row * chh)
+        }
+        return
+      }
+
+      for (const st of ambient.stars) {
+        const cells = starCells(st)
+        for (const c of cells) {
+          if (c.col < 0 || c.row < 0 || c.col >= cols || c.row >= rows) continue
+          if (c.alpha <= 0.02) continue
+          ctx!.fillStyle = `rgba(255, 252, 240, ${c.alpha.toFixed(3)})`
+          ctx!.fillText(c.ch, c.col * cw, c.row * chh)
+        }
+        // A soft glow on the head, so the meteor reads as light rather than
+        // as a stray punctuation mark in the sky.
+        const head = cells[0]
+        if (head && head.alpha > 0.05 && head.col >= 0 && head.col < cols) {
+          const g = ctx!.createRadialGradient(
+            head.col * cw + cw / 2,
+            head.row * chh + chh / 2,
+            0,
+            head.col * cw + cw / 2,
+            head.row * chh + chh / 2,
+            chh * 2.2
+          )
+          g.addColorStop(0, `rgba(255, 250, 225, ${(head.alpha * 0.5).toFixed(3)})`)
+          g.addColorStop(1, "rgba(255, 250, 225, 0)")
+          ctx!.fillStyle = g
+          ctx!.fillRect(
+            head.col * cw - chh * 2,
+            head.row * chh - chh * 2,
+            chh * 4.4,
+            chh * 4.4
+          )
+        }
+      }
     }
 
     let last = 0
@@ -420,8 +516,11 @@ export default function BlissCanvas({
       const interval = 1000 / CONFIG.fps
       if (!fading && now - last < interval) return
       T += dt
+      ambientT += dt
+      ambient = stepAmbient(ambient, dt, cols, rows, nightRef.current > 0.5)
       last = now
       draw()
+      drawAmbient()
     }
 
     let resizeTimer: ReturnType<typeof setTimeout>
@@ -449,6 +548,7 @@ export default function BlissCanvas({
       // One representative frame, mid-drift, and no loop at all.
       T = 12
       draw()
+      drawAmbient()
     } else {
       raf = requestAnimationFrame(frame)
     }

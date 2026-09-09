@@ -15,6 +15,7 @@ import ImageView from "./ImageView"
 import AsciiPaint from "./AsciiPaint"
 import Chiptune from "./Chiptune"
 import Leaderboard from "./Leaderboard"
+import Starmap from "./Starmap"
 import type { VNode } from "@/lib/vfs-types"
 
 interface Props {
@@ -60,6 +61,8 @@ export default function AppHost({ node, winId, isMobile, onReboot }: Props) {
           return <Chiptune winId={winId} isMobile={isMobile} />
         case "leaderboard":
           return <Leaderboard />
+        case "starmap":
+          return <Starmap winId={winId} isMobile={isMobile} />
       }
     case "link":
       // Links navigate rather than open; this is unreachable in practice.

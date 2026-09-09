@@ -19,6 +19,7 @@ export type AppKey =
   | "paint"
   | "music"
   | "leaderboard"
+  | "starmap"
 
 export type IconKey =
   | "folder"
@@ -33,6 +34,7 @@ export type IconKey =
   | "paint"
   | "music"
   | "trophy"
+  | "starmap"
 
 export interface VBase {
   /** Path segment, e.g. "vance". Unique among its siblings. */
@@ -41,6 +43,14 @@ export interface VBase {
   label?: string
   /** Right-aligned marker in list views, e.g. "[client]". */
   tag?: string
+  /**
+   * Kept off the desktop icon grid while staying in the filesystem.
+   *
+   * Used by things that live in the world rather than on the desktop — the
+   * crash site is found on the plains, not launched from a list — but which
+   * the terminal should still be able to `open`.
+   */
+  hidden?: boolean
   /** One-line summary shown beside the name. */
   desc?: string
   icon?: IconKey
