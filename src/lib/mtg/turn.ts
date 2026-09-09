@@ -41,6 +41,7 @@ export function advance(state: GameState): void {
       for (const card of battlefield(state, state.active)) {
         card.tapped = false
         card.sick = false
+        card.produced = []
       }
       log(state, `— turn ${state.turn}: ${player.name} —`)
       break

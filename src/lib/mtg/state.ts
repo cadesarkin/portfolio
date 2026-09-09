@@ -57,6 +57,7 @@ function newCard(id: number, def: CardDef, owner: PlayerId, zone: Zone): GameCar
     attacking: false,
     blocking: null,
     attachedTo: null,
+    produced: [],
     token: false,
     castCount: 0,
   }

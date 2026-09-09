@@ -75,6 +75,12 @@ function resolveTargets(ctx: EffectContext, spec: TargetSpec): GameCard[] {
 
   if (spec.what === "self") return source ? [source] : []
 
+  /* A player is not a permanent. Without this the type filters below all fell
+     through, and "deals 2 damage to your opponent" returned every permanent
+     that opponent controlled — so an entry trigger aimed at the face swept
+     their whole board as well. */
+  if (spec.what === "player") return []
+
   if (spec.chosen) {
     return ctx.targets
       .filter((t): t is { kind: "card"; id: number } => t.kind === "card")
@@ -150,6 +156,7 @@ function createToken(
     attacking: false,
     blocking: null,
     attachedTo: null,
+    produced: [],
     token: true,
     castCount: 0,
   }

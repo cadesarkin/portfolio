@@ -32,6 +32,7 @@ function put(state: GameState, name: string, controller: 0 | 1, ready = true): G
     attacking: false,
     blocking: null,
     attachedTo: null,
+    produced: [],
     token: false,
     castCount: 0,
   }

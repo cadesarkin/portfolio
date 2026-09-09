@@ -15,6 +15,7 @@ import {
   maxX,
   playLand,
   tapForMana,
+  untapForMana,
 } from "@/lib/mtg/actions"
 import { hasX, parseCost } from "@/lib/mtg/mana"
 import { useWindowKeys } from "@/components/desktop/use-window-keys"
@@ -124,16 +125,28 @@ export default function Duel({ winId }: { winId: string }) {
       e.preventDefault()
       const card = state.cards[hovered]
       if (!card || card.controller !== HUMAN) return
-      if (card.tapped) card.tapped = false
-      else if (canTapForMana(state, card.id) === null) tapForMana(state, card.id)
-      else card.tapped = true
+      if (card.tapped) {
+        // Untapping gives back the mana it made; if that mana is already spent
+        // the source stays tapped, since it cannot be un-spent.
+        untapForMana(state, card.id)
+      } else if (canTapForMana(state, card.id) === null) {
+        tapForMana(state, card.id)
+      } else {
+        card.tapped = true
+      }
       commit(state, waiting)
       return
     }
 
     if (key === "u") {
       e.preventDefault()
-      for (const card of board) card.tapped = false
+      for (const card of board) {
+        if (!card.tapped) continue
+        // Anything whose mana is still floating is refunded; anything whose
+        // mana is spent stays tapped rather than conjuring it back.
+        if (card.produced.length > 0) untapForMana(state, card.id)
+        else card.tapped = false
+      }
       commit(state, waiting)
       return
     }

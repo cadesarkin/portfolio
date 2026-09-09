@@ -113,7 +113,36 @@ export function tapForMana(
   }
 
   card.tapped = true
+  card.produced = taken
   player.pool = addMana(player.pool, taken)
+  return true
+}
+
+/**
+ * Untaps a permanent, taking back any mana it made.
+ *
+ * Without the refund, tapping and untapping a land was a mana machine: each tap
+ * added to the pool and the untap gave the land straight back. Mana that has
+ * already been spent cannot be taken back, so untapping is refused in that
+ * case — the alternative is a pool that goes negative, or a spell that was paid
+ * for with mana the game later decides you never had.
+ */
+export function untapForMana(state: GameState, cardId: number): boolean {
+  const card = state.cards[cardId]
+  if (!card || card.zone !== "battlefield" || !card.tapped) return false
+  const player = state.players[card.controller]
+
+  if (card.produced.length > 0) {
+    const pool = { ...player.pool }
+    for (const symbol of card.produced) {
+      if (pool[symbol] <= 0) return false
+      pool[symbol] -= 1
+    }
+    player.pool = pool
+  }
+
+  card.produced = []
+  card.tapped = false
   return true
 }
 
@@ -325,11 +354,18 @@ export function maxX(state: GameState, cardId: number): number {
   return Math.max(0, Math.floor(spare / cost.x))
 }
 
-/** Mana empties between steps, as it does in a real game. */
+/**
+ * Mana empties between steps, as it does in a real game.
+ *
+ * What each permanent produced is forgotten at the same time: the mana is gone,
+ * so there is nothing left to give back, and a source tapped last phase stays
+ * tapped.
+ */
 export function emptyPools(state: GameState): void {
   for (const p of state.players) {
     p.pool = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 }
   }
+  for (const card of battlefield(state)) card.produced = []
 }
 
 /* ── Equipment ────────────────────────────────────────────────────────── */

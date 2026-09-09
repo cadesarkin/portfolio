@@ -6,8 +6,10 @@ import {
   canCast,
   castSpell,
   maxX,
+  emptyPools,
   netManaOf,
   tapForMana,
+  untapForMana,
   shortfall,
 } from "./actions"
 import { parseCost, emptyPool } from "./mana"
@@ -38,6 +40,7 @@ function put(state: GameState, name: string, controller: 0 | 1, ready = true): G
     attacking: false,
     blocking: null,
     attachedTo: null,
+    produced: [],
     token: false,
     castCount: 0,
   }
@@ -328,5 +331,76 @@ describe("affording a spell of the wrong colour", () => {
     const g = game()
     put(g, "Shared Volume", 0) // any colour
     expect(canCast(g, toHand(g, "Drop Packet", 0).id)).toBeNull()
+  })
+})
+
+/* ── Tapping and untapping ────────────────────────────────────────────── */
+
+describe("untapping a mana source", () => {
+  /*
+   * Reported as a mana machine: tapping a land added mana, untapping gave the
+   * land straight back, and doing it repeatedly filled the pool for free.
+   */
+  it("takes back the mana it made", () => {
+    const g = game()
+    const forest = put(g, "Forest", 0)
+    tapForMana(g, forest.id)
+    expect(g.players[0].pool.G).toBe(1)
+    expect(untapForMana(g, forest.id)).toBe(true)
+    expect(g.players[0].pool.G).toBe(0)
+    expect(forest.tapped).toBe(false)
+  })
+
+  it("cannot be looped for free mana", () => {
+    const g = game()
+    const forest = put(g, "Forest", 0)
+    for (let i = 0; i < 20; i++) {
+      tapForMana(g, forest.id)
+      untapForMana(g, forest.id)
+    }
+    tapForMana(g, forest.id)
+    expect(poolTotal(g, 0), "twenty taps and untaps should leave one mana").toBe(1)
+  })
+
+  /* Mana already spent cannot be un-spent, so the source stays tapped. */
+  it("refuses when the mana has already been spent", () => {
+    const g = game()
+    for (let i = 0; i < 3; i++) put(g, "Forest", 0)
+    const spell = toHand(g, "Llanowar Elves", 0)
+    castSpell(g, spell.id)
+    const tapped = battlefield(g, 0).filter((c) => c.tapped)
+    expect(tapped.length).toBeGreaterThan(0)
+    expect(untapForMana(g, tapped[0].id)).toBe(false)
+    expect(tapped[0].tapped).toBe(true)
+  })
+
+  it("gives back the right colour from a dual", () => {
+    const g = game()
+    const forge = put(g, "Battlefield Forge", 0)
+    tapForMana(g, forge.id, ["W"])
+    expect(g.players[0].pool.W).toBe(1)
+    untapForMana(g, forge.id)
+    expect(poolTotal(g, 0)).toBe(0)
+  })
+
+  it("gives back both of Sol Ring's", () => {
+    const g = game()
+    const ring = put(g, "Sol Ring", 0)
+    tapForMana(g, ring.id)
+    expect(g.players[0].pool.C).toBe(2)
+    untapForMana(g, ring.id)
+    expect(g.players[0].pool.C).toBe(0)
+  })
+
+  /* Once the pool empties there is nothing to give back, and the source is
+     spent for the turn rather than untapping itself. */
+  it("stays tapped once the phase has ended", () => {
+    const g = game()
+    const forest = put(g, "Forest", 0)
+    tapForMana(g, forest.id)
+    emptyPools(g)
+    expect(forest.produced).toEqual([])
+    expect(untapForMana(g, forest.id)).toBe(true)
+    expect(poolTotal(g, 0)).toBe(0)
   })
 })

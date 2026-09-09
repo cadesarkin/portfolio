@@ -283,6 +283,8 @@ export interface GameCard {
   blocking: number | null
   /** The creature this Equipment or Aura is attached to. */
   attachedTo: number | null
+  /** Mana this permanent added when it was tapped, so untapping can undo it. */
+  produced: ManaSymbol[]
   /** True for a token, which ceases to exist when it leaves the battlefield. */
   token: boolean
   /** Commander cast count, for the tax. */

@@ -33,6 +33,7 @@ function put(state: GameState, name: string, controller: 0 | 1, ready = true): G
     attacking: false,
     blocking: null,
     attachedTo: null,
+    produced: [],
     token: false,
     castCount: 0,
   }
@@ -379,5 +380,60 @@ describe("the keyword glossary", () => {
     expect(overflow.name).toBe("overflow")
     const plain = keywordGlossary("mtg").find((k) => k.engine === "trample")!
     expect(plain.name).toBe("trample")
+  })
+})
+
+/* ── Damage aimed at a player ─────────────────────────────────────────── */
+
+describe("damage to the opponent", () => {
+  /*
+   * Reported: a creature whose entry trigger burns the opponent was also
+   * hitting every creature they controlled. A player is not a permanent, but
+   * the target resolver had no case for one, so every type filter fell through
+   * and it returned the opponent's whole board.
+   */
+  it("hits the player and nothing else", () => {
+    const g = game()
+    const theirs = put(g, "Watchdog", 1)
+    const alsoTheirs = put(g, "Firewall Rule", 1)
+    const mine = put(g, "Hot Loop", 0)
+
+    const panic = put(g, "Kernel Panic", 0)
+    checkTriggers(g, { type: "enters", card: panic })
+    resolveAll(g)
+
+    expect(g.players[1].life, "the opponent should take 2").toBe(STARTING_LIFE - 2)
+    expect(theirs.damage, "their creatures should be untouched").toBe(0)
+    expect(alsoTheirs.damage).toBe(0)
+    expect(mine.damage).toBe(0)
+  })
+
+  it("does the same for a repeating trigger", () => {
+    const g = game()
+    const theirs = put(g, "Watchdog", 1)
+    put(g, "Watchdog Timer", 0)
+    const fresh = put(g, "Hot Loop", 0)
+    checkTriggers(g, { type: "enters", card: fresh })
+    resolveAll(g)
+    expect(g.players[1].life).toBe(STARTING_LIFE - 1)
+    expect(theirs.damage).toBe(0)
+  })
+
+  /* The other direction still has to work: a board sweeper must hit creatures
+     on both sides, and no player. */
+  it("still lets a sweeper hit every creature", () => {
+    const g = game()
+    for (let i = 0; i < 4; i++) put(g, "Core Sector", 0)
+    const mine = put(g, "Hot Loop", 0) // 3/1, dies to two
+    const theirs = put(g, "Watchdog", 1) // 1/3, survives
+    const throttle = put(g, "Thermal Throttle", 0)
+    moveCard(g, throttle.id, "hand")
+    expect(castSpell(g, throttle.id)).toBe(true)
+    resolveAll(g)
+
+    expect(theirs.damage, "a survivor keeps the damage").toBe(2)
+    expect(g.cards[mine.id].zone, "two damage kills a one-toughness process").toBe("graveyard")
+    expect(g.players[0].life, "a sweeper does not hit players").toBe(STARTING_LIFE)
+    expect(g.players[1].life).toBe(STARTING_LIFE)
   })
 })
