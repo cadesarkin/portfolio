@@ -16,12 +16,22 @@ import { useWindows } from "./window-manager"
  * Positioned from the same CRATER constant the terrain shader uses, so the two
  * cannot drift apart when the window resizes.
  */
+/**
+ * An escape capsule, half-buried, hatch blown open.
+ *
+ * The first attempt was five lines of ambiguous line-art that nobody could
+ * identify. This one commits to a silhouette: a ringed hull, an open hatch you
+ * can see into, and bent struts driven into the ground.
+ */
 const POD = [
-  "   _____   ",
-  "  /_|_|_\\  ",
-  " |  o o  | ",
-  " |_______| ",
-  "  \\_/ \\_/  ",
+  "    _____    ",
+  "  .'     '.  ",
+  " /  .---.  \\ ",
+  "|   | o |   |",
+  "|   '---'   |",
+  " \\  =====  / ",
+  " |_________| ",
+  "//|  | |  |\\\\",
 ]
 
 export default function CrashSite({ isMobile }: { isMobile: boolean }) {
@@ -59,21 +69,21 @@ export default function CrashSite({ isMobile }: { isMobile: boolean }) {
         cursor: "pointer",
         font: "inherit",
         // Scales with the viewport so it stays proportional to the crater.
-        fontSize: isMobile ? 7 : 11,
+        fontSize: isMobile ? 8 : 12.5,
         lineHeight: 1.05,
         // The crater floor is busy rubble, so the pod carries its own dark
         // plate — a text shadow alone left it lost in the texture.
         color: "#ffd98a",
         whiteSpace: "pre",
-        textShadow: "0 1px 2px rgba(0,0,0,0.9)",
+        // A hard outline instead of a plate. A translucent backing sat exactly
+        // where the fire burns and dimmed every flame behind it.
+        textShadow:
+          "1px 0 0 #0a1220, -1px 0 0 #0a1220, 0 1px 0 #0a1220, 0 -1px 0 #0a1220, 0 0 6px rgba(0,0,0,0.9)",
       }}
     >
       <span
         aria-hidden="true"
         style={{
-          padding: "4px 6px",
-          borderRadius: 3,
-          background: "rgba(10, 18, 30, 0.55)",
           transition: "transform 160ms ease-out, filter 160ms ease-out",
           transform: hover ? "translateY(-3px) scale(1.06)" : "none",
           filter: hover

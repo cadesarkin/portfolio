@@ -20,6 +20,7 @@ import {
   starCells,
   type Ambient,
 } from "@/lib/ambient"
+import { createFire, stepFire, emberCell, type Fire } from "@/lib/embers"
 import { WALLPAPER, type RGB, type Theme } from "@/lib/theme"
 import {
   DEFAULT_SETTINGS,
@@ -432,6 +433,7 @@ export default function BlissCanvas({
 
     let ambient: Ambient = createAmbient(1, 1)
     let ambientT = 0
+    let fire: Fire = createFire()
 
     /**
      * Birds and meteors, drawn on top of the finished scene.
@@ -442,6 +444,15 @@ export default function BlissCanvas({
      */
     function drawAmbient() {
       const night = nightMix > 0.5
+
+      // Fire burns at any hour, and is drawn before the sky life so a meteor
+      // can pass in front of the smoke column.
+      for (const e of fire.embers) {
+        const c = emberCell(e, ambientT, night)
+        if (c.col < 0 || c.row < 0 || c.col >= cols || c.row >= rows) continue
+        ctx!.fillStyle = c.color
+        ctx!.fillText(c.ch, c.col * cw, c.row * chh)
+      }
 
       if (!night) {
         for (const b of ambient.birds) {
@@ -518,6 +529,11 @@ export default function BlissCanvas({
       T += dt
       ambientT += dt
       ambient = stepAmbient(ambient, dt, cols, rows, nightRef.current > 0.5)
+      // The wreck is still burning. Anchored to the same crater the terrain
+      // shader uses, so fire and scorch mark stay together.
+      // Anchored at the crater floor, a little below the wreck's centre, so
+      // the flames rise past it rather than being drawn behind it.
+      fire = stepFire(fire, dt, CRATER.x * cols, CRATER.y * rows + 2)
       last = now
       draw()
       drawAmbient()
