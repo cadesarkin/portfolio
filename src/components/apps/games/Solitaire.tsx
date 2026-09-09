@@ -210,8 +210,8 @@ export default function Solitaire({
       }
       hint={
         isMobile
-          ? "tap a card, then tap where it goes · double-tap to send it home"
-          : "click a card then its destination · double-click to auto-place · space draws · a autoplays · r restarts"
+          ? "tap a card, then tap a highlighted pile · double-tap sends it home"
+          : "click a card, then click a highlighted pile · double-click sends a card home · space draws · a autoplays · r restarts"
       }
     >
       {entry.prompt}
@@ -279,6 +279,20 @@ export default function Solitaire({
                     : top && onSource({ from: "foundation", suit })
                 }
               >
+                {top && accepts({ to: "foundation", suit }) && (
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      inset: -3,
+                      border: "2px solid var(--accent)",
+                      borderRadius: 6,
+                      background: "var(--accent-wash)",
+                      pointerEvents: "none",
+                      zIndex: 1,
+                    }}
+                  />
+                )}
                 {top ? (
                   <CardFace
                     card={top}
@@ -359,6 +373,26 @@ export default function Solitaire({
                   </div>
                 )
               })}
+
+              {/*
+                Drawn over the whole column rather than on the slot beneath it.
+                The slot is covered by the cards on any non-empty pile, so a
+                highlight there is invisible exactly when it is most needed —
+                leaving a selected card with no indication of where it can go.
+              */}
+              {accepts({ to: "tableau", pile: p }) && (
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    inset: -3,
+                    border: "2px solid var(--accent)",
+                    borderRadius: 6,
+                    background: "var(--accent-wash)",
+                    pointerEvents: "none",
+                  }}
+                />
+              )}
             </div>
             )
           })}
