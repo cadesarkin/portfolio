@@ -26,10 +26,6 @@ export function canAttack(state: GameState, card: GameCard): boolean {
   return true
 }
 
-/** Every creature that could be declared as an attacker right now. */
-export const possibleAttackers = (state: GameState): GameCard[] =>
-  battlefield(state, state.active).filter((c) => canAttack(state, c))
-
 /**
  * Declares attackers.
  *

@@ -148,8 +148,3 @@ export function step(
 export function bob(sprite: Sprite, t: number): number {
   return Math.sin(t * 1.6 + sprite.phase) * 3
 }
-
-/** Sprites are small; this keeps a pathological drawing out of storage. */
-export function serialisable(sprites: Sprite[]): Sprite[] {
-  return sprites.slice(-MAX_SPRITES)
-}

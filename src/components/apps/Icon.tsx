@@ -281,7 +281,7 @@ export function Icon({ name, size = 16 }: { name: IconKey; size?: number }) {
   )
 }
 
-export function iconKeyFor(node: VNode): IconKey {
+function iconKeyFor(node: VNode): IconKey {
   if (node.icon) return node.icon
   switch (node.kind) {
     case "dir":

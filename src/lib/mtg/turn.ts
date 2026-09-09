@@ -14,9 +14,6 @@ import { PHASES, type GameState, type Phase } from "./types"
 
 const next = (phase: Phase): Phase => PHASES[(PHASES.indexOf(phase) + 1) % PHASES.length]
 
-/** Phases that hand control back rather than running on. */
-export const STOPS: Phase[] = ["main1", "declareAttackers", "declareBlockers", "main2"]
-
 /**
  * Advances one phase and runs everything that phase does on its own.
  *
@@ -94,14 +91,6 @@ export function advance(state: GameState): void {
   }
 
   stateBasedActions(state)
-}
-
-/** Advances until the next phase where a player would actually decide. */
-export function advanceToStop(state: GameState, limit = 24): void {
-  let guard = 0
-  do {
-    advance(state)
-  } while (state.winner === null && !STOPS.includes(state.phase) && guard++ < limit)
 }
 
 /**

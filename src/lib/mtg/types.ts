@@ -14,8 +14,6 @@ export type ManaSymbol = Colour | "C"
 /** A mana pool, plus generic which any colour can pay. */
 export type Pool = Record<ManaSymbol, number>
 
-export const COLOURS: Colour[] = ["W", "U", "B", "R", "G"]
-
 export type Zone =
   | "library"
   | "hand"

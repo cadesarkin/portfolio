@@ -128,8 +128,3 @@ export function keywordsOf(state: GameState, card: GameCard): Keyword[] {
 export const hasKeyword = (state: GameState, card: GameCard, kw: Keyword): boolean =>
   keywordsOf(state, card).includes(kw)
 
-/** Subtypes including any gained in play. */
-export const subtypesOf = (card: GameCard): string[] => [
-  ...card.def.subtypes,
-  ...card.addedSubtypes,
-]

@@ -9,7 +9,7 @@
  */
 
 import { cardDef } from "./cards"
-import { matches, powerOf, toughnessOf } from "./continuous"
+import { matches } from "./continuous"
 import { battlefield, cardsIn, log, moveCard, opponentOf, subject } from "./state"
 import type {
   Amount,
@@ -33,7 +33,7 @@ export interface EffectContext {
   x?: number
 }
 
-export function amountOf(ctx: EffectContext, amount: Amount): number {
+function amountOf(ctx: EffectContext, amount: Amount): number {
   if (typeof amount === "number") return amount
   switch (amount.count) {
     case "creatures":
@@ -70,7 +70,7 @@ function playersFor(ctx: EffectContext, spec: PlayerSpec): PlayerId[] {
  * An unchosen one is worked out here, which is how "all creatures you control"
  * needs no interaction.
  */
-export function resolveTargets(ctx: EffectContext, spec: TargetSpec): GameCard[] {
+function resolveTargets(ctx: EffectContext, spec: TargetSpec): GameCard[] {
   const { state, source, controller } = ctx
 
   if (spec.what === "self") return source ? [source] : []
@@ -110,7 +110,7 @@ function targetPlayers(ctx: EffectContext, spec: TargetSpec): PlayerId[] {
   return [opponentOf(ctx.controller)]
 }
 
-export function createToken(
+function createToken(
   state: GameState,
   controller: PlayerId,
   spec: TokenSpec
@@ -166,7 +166,7 @@ export function damagePlayer(state: GameState, playerId: PlayerId, amount: numbe
   log(state, `${subject(player.name, "take")} ${amount} — ${player.life} left`)
 }
 
-export function dealDamageToCard(state: GameState, card: GameCard, amount: number): void {
+function dealDamageToCard(state: GameState, card: GameCard, amount: number): void {
   if (amount <= 0) return
   card.damage += amount
 }
@@ -387,9 +387,5 @@ export function applyEffect(ctx: EffectContext, effect: Effect): void {
     }
   }
 }
-
-/** Power and toughness together, for the log and the UI. */
-export const statLine = (state: GameState, card: GameCard): string =>
-  `${powerOf(state, card)}/${toughnessOf(state, card)}`
 
 export { cardDef, cardsIn }

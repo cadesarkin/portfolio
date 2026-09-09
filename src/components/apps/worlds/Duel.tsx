@@ -36,13 +36,12 @@ import {
   runUntilPlayer,
   type Waiting,
 } from "@/lib/mtg/duel"
-import { KERNEL_DECKS } from "@/lib/mtg/sets/kernel"
+import { KERNEL_DECKS, KERNEL_DECK_IDS } from "@/lib/mtg/sets/kernel"
 import { keywordName, lifeName, typeLine, type Flavour } from "@/lib/mtg/flavour"
 import type { GameCard, GameState, Pool } from "@/lib/mtg/types"
 
-const KERNEL_IDS = KERNEL_DECKS.map((d) => d.id)
 const flavourOf = (deckId: string): Flavour =>
-  KERNEL_IDS.includes(deckId) ? "kernel" : "mtg"
+  KERNEL_DECK_IDS.includes(deckId) ? "kernel" : "mtg"
 
 /** Colour by how much of a card's text the engine runs. */
 const ENCODED_MARK: Record<string, { label: string; colour: string } | null> = {
@@ -80,8 +79,8 @@ export default function Duel({ winId }: { winId: string }) {
   const seed = useRef(Math.floor(Math.random() * 100000))
 
   const start = useCallback((mine: string) => {
-    const ours = KERNEL_IDS.includes(mine)
-    const pool = ours ? KERNEL_IDS : DECKS.map((d) => d.id)
+    const ours = KERNEL_DECK_IDS.includes(mine)
+    const pool = ours ? KERNEL_DECK_IDS : DECKS.map((d) => d.id)
     const theirs = pool.find((id) => id !== mine) ?? mine
     const g = createGame(mine, theirs, ["you", "opponent"], {
       seed: seed.current,

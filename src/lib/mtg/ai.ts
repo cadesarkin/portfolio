@@ -63,7 +63,7 @@ export function aiCastSpells(state: GameState, me: PlayerId, limit = 6): number 
  * random moves. A permanent is always worth playing, because a body on the
  * board is a body. A spell is only worth casting if some of it actually runs.
  */
-export function worthCasting(state: GameState, card: GameCard): boolean {
+function worthCasting(state: GameState, card: GameCard): boolean {
   if (isPermanent(card.def)) return true
 
   const effects = card.def.abilities
@@ -224,12 +224,3 @@ export function aiEquip(state: GameState, me: PlayerId): number {
   return moved
 }
 
-/** Everything the AI does in a main phase. */
-export function aiMainPhase(state: GameState, me: PlayerId): void {
-  aiPlayLand(state, me)
-  aiCastSpells(state, me)
-  aiEquip(state, me)
-}
-
-export const creaturesOf = (state: GameState, p: PlayerId): GameCard[] =>
-  battlefield(state, p).filter((c) => c.def.types.includes("Creature"))

@@ -277,39 +277,3 @@ export const battlefield = (state: GameState, playerId?: PlayerId): GameCard[] =
   return cardsIn(state, state.players[playerId].battlefield)
 }
 
-/** Deep enough copy that engine functions can be written as mutations. */
-export function cloneState(state: GameState): GameState {
-  return {
-    ...state,
-    cards: Object.fromEntries(
-      Object.entries(state.cards).map(([id, c]) => [
-        id,
-        { ...c, counters: { ...c.counters }, untilEot: { ...c.untilEot, keywords: [...c.untilEot.keywords] }, addedSubtypes: [...c.addedSubtypes] },
-      ])
-    ),
-    players: [
-      {
-        ...state.players[0],
-        library: [...state.players[0].library],
-        hand: [...state.players[0].hand],
-        battlefield: [...state.players[0].battlefield],
-        graveyard: [...state.players[0].graveyard],
-        exile: [...state.players[0].exile],
-        command: [...state.players[0].command],
-        pool: { ...state.players[0].pool },
-      },
-      {
-        ...state.players[1],
-        library: [...state.players[1].library],
-        hand: [...state.players[1].hand],
-        battlefield: [...state.players[1].battlefield],
-        graveyard: [...state.players[1].graveyard],
-        exile: [...state.players[1].exile],
-        command: [...state.players[1].command],
-        pool: { ...state.players[1].pool },
-      },
-    ],
-    stack: state.stack.map((s) => ({ ...s, targets: [...s.targets], effects: [...s.effects] })),
-    log: [...state.log],
-  }
-}

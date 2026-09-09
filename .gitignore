@@ -45,8 +45,5 @@ next-env.d.ts
 .claude/
 skills-lock.json
 
-# Reports written by the test suite.
-coverage-report.txt
-playability-report.txt
-inert-report.txt
-not-working.txt
+# Report written by the test suite.
+card-report.txt

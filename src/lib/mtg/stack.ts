@@ -134,7 +134,7 @@ export function pushStack(state: GameState, item: Omit<StackItem, "id">): void {
  * Returns false when there was nothing to resolve, so a caller can loop until
  * the stack is empty without needing to check first.
  */
-export function resolveTop(state: GameState): boolean {
+function resolveTop(state: GameState): boolean {
   const item = state.stack.pop()
   if (!item) return false
 

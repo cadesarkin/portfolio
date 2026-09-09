@@ -25,7 +25,6 @@ export interface Game {
 }
 
 export const isRed = (s: Suit) => s === "H" || s === "D"
-export const cardLabel = (c: Card) => `${RANKS[c.rank - 1]}${c.suit}`
 
 /** Where a drag started. */
 export type Source =

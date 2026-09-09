@@ -80,7 +80,7 @@ function stat(v: string | null | undefined): number | null {
   return Number.isFinite(n) ? n : 0
 }
 
-export const hasStar = (c: RawCard): boolean =>
+const hasStar = (c: RawCard): boolean =>
   c.power === "*" || c.toughness === "*" || (c.power ?? "").includes("*")
 
 function parseKeywords(list: string[] | undefined): Keyword[] {
@@ -220,7 +220,7 @@ export function cardDef(name: string): CardDef | undefined {
   return def
 }
 
-export const ALL_CARD_NAMES = Object.keys(DATA.cards)
+const ALL_CARD_NAMES = Object.keys(DATA.cards)
 
 /** Every definition, built. Used by the coverage report and by tests. */
 export function allDefs(): CardDef[] {
@@ -245,7 +245,6 @@ export function deckList(deckId: string): { commander: string; cards: string[] }
   return { commander: deck.commander, cards }
 }
 
-export const isCreature = (d: CardDef): boolean => d.types.includes("Creature")
 export const isLand = (d: CardDef): boolean => d.types.includes("Land")
 export const isPermanent = (d: CardDef): boolean =>
   d.types.some((t) => ["Creature", "Artifact", "Enchantment", "Land", "Planeswalker"].includes(t))

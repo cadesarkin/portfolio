@@ -108,10 +108,3 @@ export function addMana(pool: Pool, symbols: ManaSymbol[]): Pool {
   return out
 }
 
-/** A cost rendered back to `{2}{G}` form, for the log and the UI. */
-export function formatCost(c: Cost): string {
-  const parts: string[] = []
-  if (c.generic > 0) parts.push(`{${c.generic}}`)
-  for (const p of c.pips) parts.push(`{${p}}`)
-  return parts.join("") || "{0}"
-}

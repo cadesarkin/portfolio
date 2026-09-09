@@ -12,7 +12,7 @@ const PIP: Record<string, { bg: string; fg: string }> = {
   C: { bg: "#b9bfc4", fg: "#22282c" },
 }
 
-export function Pip({ symbol }: { symbol: string }) {
+function Pip({ symbol }: { symbol: string }) {
   // Hybrid and phyrexian pips take the colour of their first half.
   const key = symbol.split("/")[0]
   const style = PIP[key] ?? PIP.C

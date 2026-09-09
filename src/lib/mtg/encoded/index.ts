@@ -23,7 +23,7 @@ const yourCreatures = { types: ["Creature"], controller: "you" as const }
 const anyCreature = { what: "creature" as const, controller: "any" as const, chosen: true }
 const yourCreature = { what: "creature" as const, controller: "you" as const, chosen: true }
 
-export const ENCODED: Record<string, EncodedCard> = {
+const ENCODED: Record<string, EncodedCard> = {
   /* ── Commanders ─────────────────────────────────────────────────────── */
 
   "Jetmir, Nexus of Revels": {
@@ -811,8 +811,5 @@ export const ENCODED: Record<string, EncodedCard> = {
 export function encodedFor(name: string): EncodedCard | undefined {
   return ENCODED[name]
 }
-
-/** Cards this file knows how to run, for the coverage report. */
-export const ENCODED_NAMES = Object.keys(ENCODED)
 
 export { anyCreature }

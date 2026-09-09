@@ -23,15 +23,6 @@ import { MAIN_PHASES } from "./types"
 
 export type Refusal = string | null
 
-/** Total mana available: what is floating, plus untapped sources. */
-export function availableMana(state: GameState, playerId: PlayerId): number {
-  const player = state.players[playerId]
-  const floating =
-    player.pool.W + player.pool.U + player.pool.B + player.pool.R + player.pool.G + player.pool.C
-  const sources = battlefield(state, playerId).filter((c) => manaAbilityOf(c) !== null && !c.tapped)
-  return floating + sources.reduce((n, c) => n + Math.max(0, netManaOf(c)), 0)
-}
-
 /** The mana ability a permanent can use right now, if any. */
 export function manaAbilityOf(card: GameCard): { produces: ManaOption[]; cost: string } | null {
   for (const ability of card.def.abilities) {
@@ -183,7 +174,7 @@ export function playLand(state: GameState, cardId: number): boolean {
 }
 
 /** The commander tax: {2} more for each time it has been cast before. */
-export function commanderTax(card: GameCard): number {
+function commanderTax(card: GameCard): number {
   return card.zone === "command" ? card.castCount * 2 : 0
 }
 
@@ -355,13 +346,3 @@ export function equip(state: GameState, equipmentId: number, creatureId: number)
   return true
 }
 
-/** Attaches an Aura as it resolves. Auras do not move once attached. */
-export function attachAura(state: GameState, auraId: number, creatureId: number): boolean {
-  const aura = state.cards[auraId]
-  const creature = state.cards[creatureId]
-  if (!aura || !creature) return false
-  if (creature.zone !== "battlefield") return false
-  aura.attachedTo = creatureId
-  log(state, `${aura.def.name} enchants ${creature.def.name}`)
-  return true
-}

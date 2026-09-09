@@ -12,7 +12,7 @@ export interface Canvas {
   cells: Cell[]
 }
 
-export const BLANK: Cell = { ch: " ", color: -1 }
+const BLANK: Cell = { ch: " ", color: -1 }
 
 /** Ink colours. Index 0 is "default", which follows the theme. */
 export const PALETTE = [
