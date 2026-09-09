@@ -235,6 +235,12 @@ export default function Duel({ winId }: { winId: string }) {
   const blockersOn = (attackerId: number): number =>
     Object.values(blocks).filter((id) => id === attackerId).length
 
+  /** Whether anything the player controls could block at all. */
+  const canBlockAnything = Object.values(state.cards).some(
+    (attacker) =>
+      attacker.attacking && cards(me.battlefield).some((c) => canBlock(state, c, attacker))
+  )
+
   /** An attacker with menace needs two blockers or the block is thrown away. */
   const illegalBlocks = Object.values(state.cards)
     .filter((c) => c.attacking && hasKeyword(state, c, "menace"))
@@ -285,8 +291,10 @@ export default function Duel({ winId }: { winId: string }) {
             if (!c.attacking) return null
             const n = blockersOn(c.id)
             const menace = hasKeyword(state, c, "menace")
-            if (n === 0) return menace ? "menace" : null
-            return menace && n === 1 ? `${n} — needs 2` : `blocked by ${n}`
+            // An attacker used to be marked only by its border colour, which
+            // left nothing to tell you what was worth clicking.
+            if (n === 0) return menace ? "attacking · needs 2" : "attacking"
+            return menace && n === 1 ? `${n} blocker — needs 2` : `blocked by ${n}`
           }}
           onInspect={setInspect}
         />
@@ -314,9 +322,11 @@ export default function Duel({ winId }: { winId: string }) {
               : waiting.for === "player-attackers"
                 ? "choose attackers"
                 : waiting.for === "player-blockers"
-                  ? blockTarget === null
-                    ? "click an attacker to block it"
-                    : `blocking ${state.cards[blockTarget]?.def.name} — click your creatures`
+                  ? !canBlockAnything
+                    ? "nothing you control can block"
+                    : blockTarget === null
+                      ? "click an attacker to block it"
+                      : `blocking ${state.cards[blockTarget]?.def.name} — click your creatures`
                   : equipping !== null
                     ? "click a creature to equip it"
                     : picking !== null
@@ -352,6 +362,12 @@ export default function Duel({ winId }: { winId: string }) {
             const blocking = blocks[c.id]
             if (blocking !== undefined) {
               return `blocks ${state.cards[blocking]?.def.name.split(",")[0].split(" ")[0] ?? ""}`
+            }
+            if (waiting.for === "player-blockers" && blockTarget !== null) {
+              const attacker = state.cards[blockTarget]
+              if (attacker && c.def.types.includes("Creature")) {
+                return canBlock(state, c, attacker) ? "can block" : "cannot block"
+              }
             }
             if (c.attachedTo !== null) return "equipped"
             const worn = attachmentsOf(state, c)
@@ -450,7 +466,9 @@ export default function Duel({ winId }: { winId: string }) {
                 }
               >
                 {Object.keys(blocks).length
-                  ? `confirm ${Object.keys(blocks).length} blocks`
+                  ? `confirm ${Object.keys(blocks).length} block${
+                      Object.keys(blocks).length === 1 ? "" : "s"
+                    }`
                   : "no blocks"}
               </button>
               {illegalBlocks.length > 0 && (
@@ -894,7 +912,12 @@ function Permanent({
             fontSize: 8,
             marginTop: 1,
             lineHeight: 1.2,
-            color: badge.includes("needs") ? "#e07a63" : "#7fb4e0",
+            color:
+              badge.includes("needs") || badge.startsWith("cannot")
+                ? "#e07a63"
+                : badge === "attacking" || badge === "can block"
+                  ? "#ffd166"
+                  : "#7fb4e0",
           }}
         >
           {badge}

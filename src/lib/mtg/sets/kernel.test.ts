@@ -1,12 +1,13 @@
 import { describe, it, expect } from "vitest"
 import { KERNEL_CARDS, KERNEL_DECKS, kernelDeckList } from "./kernel"
 import { cardDef, deckList } from "../cards"
-import { createGame, battlefield, STARTING_LIFE } from "../state"
+import { createGame, battlefield, moveCard, STARTING_LIFE } from "../state"
 import { selfPlay } from "../duel"
 import { castSpell } from "../actions"
 import { resolveAll, stateBasedActions, checkTriggers } from "../stack"
 import { powerOf, hasKeyword } from "../continuous"
 import { advanceTo } from "../turn"
+import { declareAttackers } from "../combat"
 import { keywordName, typeName, colourName } from "../flavour"
 import type { GameCard, GameState } from "../types"
 
@@ -283,5 +284,61 @@ describe("the themed names", () => {
   it("renames colours", () => {
     expect(colourName("R", "kernel")).toBe("core")
     expect(colourName("G", "kernel")).toBe("heap")
+  })
+})
+
+/* ── Draw triggers ────────────────────────────────────────────────────── */
+
+describe("creatures that draw cards", () => {
+  /*
+   * Reported as "no way to draw a card when a creature has a card draw
+   * function". The trigger was fine; the creature could not be cast, because
+   * affordability ignored colour. These pin the behaviour either way.
+   */
+  it("draws when Packet Sniffer enters, cast normally", () => {
+    const g = game()
+    for (let i = 0; i < 2; i++) put(g, "Net Segment", 0)
+    const sniffer = put(g, "Packet Sniffer", 0)
+    moveCard(g, sniffer.id, "hand")
+
+    const libraryBefore = g.players[0].library.length
+    expect(castSpell(g, sniffer.id)).toBe(true)
+    resolveAll(g)
+
+    expect(g.cards[sniffer.id].zone).toBe("battlefield")
+    expect(g.players[0].library.length, "a card should have been drawn").toBe(libraryBefore - 1)
+    expect(g.players[0].hand).toHaveLength(1)
+  })
+
+  it("draws when Deep Packet Inspector attacks", () => {
+    const g = game()
+    const dpi = put(g, "Deep Packet Inspector", 0)
+    advanceTo(g, "declareAttackers")
+    const before = g.players[0].library.length
+    declareAttackers(g, [dpi.id])
+    resolveAll(g)
+    expect(g.players[0].library.length).toBe(before - 1)
+  })
+
+  it("draws when Orphan Process dies", () => {
+    const g = game()
+    const orphan = put(g, "Orphan Process", 0)
+    const before = g.players[0].library.length
+    orphan.damage = 5
+    stateBasedActions(g)
+    resolveAll(g)
+    expect(g.cards[orphan.id].zone).toBe("graveyard")
+    expect(g.players[0].library.length).toBe(before - 1)
+  })
+
+  it("draws two from Poll", () => {
+    const g = game()
+    for (let i = 0; i < 3; i++) put(g, "Net Segment", 0)
+    const poll = put(g, "Poll", 0)
+    moveCard(g, poll.id, "hand")
+    const before = g.players[0].library.length
+    expect(castSpell(g, poll.id)).toBe(true)
+    resolveAll(g)
+    expect(g.players[0].library.length).toBe(before - 2)
   })
 })

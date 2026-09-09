@@ -280,3 +280,53 @@ describe("X spells", () => {
     expect(bear.counters["+1/+1"]).toBe(2)
   })
 })
+
+/* ── Colour, not just quantity ────────────────────────────────────────── */
+
+describe("affording a spell of the wrong colour", () => {
+  /*
+   * Reported from a real game: on turn one, with a single white land down, the
+   * table offered every one-mana spell in hand. Clicking a blue one did
+   * nothing, because the affordability check counted mana without ever asking
+   * what colour it was, and payment then failed after the check had said yes.
+   */
+  it("refuses a blue spell off a white land", () => {
+    const g = game()
+    put(g, "UI Buffer", 0) // makes {W}
+    const blue = toHand(g, "Drop Packet", 0) // costs {U}
+    expect(canCast(g, blue.id)).toBe("not enough mana")
+  })
+
+  it("allows it once the right colour is there", () => {
+    const g = game()
+    put(g, "Net Segment", 0) // makes {U}
+    expect(canCast(g, toHand(g, "Drop Packet", 0).id)).toBeNull()
+  })
+
+  /* If the check says yes, casting must succeed. That is the whole contract. */
+  it("never says yes to something that then fails to cast", () => {
+    for (const lands of [["UI Buffer"], ["Net Segment"], ["UI Buffer", "Net Segment"], ["Shared Volume", "Net Segment"]]) {
+      for (const spell of ["Drop Packet", "Sandbox", "Rate Limit", "Quarantine", "Watchdog"]) {
+        const g = game()
+        for (const l of lands) put(g, l, 0)
+        const card = toHand(g, spell, 0)
+        if (canCast(g, card.id) !== null) continue
+        expect(castSpell(g, card.id), `${spell} off ${lands.join("+")}`).toBe(true)
+      }
+    }
+  })
+
+  it("takes a two-colour spell only when both colours are available", () => {
+    const g = game()
+    put(g, "Cold Storage", 0) // {B}
+    put(g, "Cold Storage", 0)
+    const spell = toHand(g, "Anguished Unmaking", 0) // {1}{W}{B}
+    expect(canCast(g, spell.id)).toBe("not enough mana")
+  })
+
+  it("counts a land that makes any colour toward a coloured pip", () => {
+    const g = game()
+    put(g, "Shared Volume", 0) // any colour
+    expect(canCast(g, toHand(g, "Drop Packet", 0).id)).toBeNull()
+  })
+})

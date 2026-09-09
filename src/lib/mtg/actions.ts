@@ -117,6 +117,63 @@ export function tapForMana(
   return true
 }
 
+/** The mana sources a player could still tap, cheapest to activate first. */
+function tappableSources(state: GameState, playerId: PlayerId): GameCard[] {
+  return battlefield(state, playerId)
+    .filter((c) => !c.tapped && manaAbilityOf(c) !== null)
+    .sort((a, b) => {
+      // Free sources first: a Signet cannot be used until there is mana to pay it.
+      const costDiff =
+        parseCost(manaAbilityOf(a)!.cost).generic - parseCost(manaAbilityOf(b)!.cost).generic
+      if (costDiff !== 0) return costDiff
+      return manaAbilityOf(a)!.produces.length - manaAbilityOf(b)!.produces.length
+    })
+}
+
+/** Which symbol to take each of a source's mana as, given what is still needed. */
+function chooseSymbols(produces: ManaOption[], want: ManaSymbol[]): ManaSymbol[] {
+  const wanted = [...want]
+  return produces.map((option) => {
+    const i = wanted.findIndex((w) => option.includes(w))
+    if (i < 0) return option[0]
+    const picked = wanted[i]
+    wanted.splice(i, 1)
+    return picked
+  })
+}
+
+/**
+ * Whether a cost could be paid, colours and all.
+ *
+ * This walks the same greedy tapping that `autoTapFor` performs, but over a
+ * copy of the pool so nothing is spent. Counting mana without checking colour
+ * is the bug this exists to prevent: a lone white land made every one-mana
+ * spell in hand look castable, and clicking a blue one silently did nothing
+ * because payment failed after the check had already said yes.
+ */
+export function canAfford(
+  state: GameState,
+  playerId: PlayerId,
+  cost: string,
+  extra = 0
+): boolean {
+  const parsed = parseCost(cost)
+  let pool = { ...state.players[playerId].pool }
+  if (canPay(pool, parsed, extra)) return true
+
+  for (const source of tappableSources(state, playerId)) {
+    const ability = manaAbilityOf(source)!
+    if (ability.cost !== "") {
+      const paid = payFrom(pool, parseCost(ability.cost))
+      if (paid === null) continue
+      pool = paid
+    }
+    pool = addMana(pool, chooseSymbols(ability.produces, shortfall(pool, parsed)))
+    if (canPay(pool, parsed, extra)) return true
+  }
+  return canPay(pool, parsed, extra)
+}
+
 /**
  * Taps whatever is needed to pay a cost.
  *
@@ -126,19 +183,9 @@ export function tapForMana(
  */
 export function autoTapFor(state: GameState, playerId: PlayerId, cost: string, extra = 0): boolean {
   const parsed = parseCost(cost)
-  const player = state.players[playerId]
-  if (canPay(player.pool, parsed, extra)) return true
+  if (canPay(state.players[playerId].pool, parsed, extra)) return true
 
-  // Free sources first: a Signet cannot be used until there is mana to pay it.
-  const sources = battlefield(state, playerId)
-    .filter((c) => !c.tapped && manaAbilityOf(c) !== null)
-    .sort((a, b) => {
-      const costDiff = parseCost(manaAbilityOf(a)!.cost).generic - parseCost(manaAbilityOf(b)!.cost).generic
-      if (costDiff !== 0) return costDiff
-      return manaAbilityOf(a)!.produces.length - manaAbilityOf(b)!.produces.length
-    })
-
-  for (const source of sources) {
+  for (const source of tappableSources(state, playerId)) {
     // Take each source as whatever colour the cost still needs.
     tapForMana(state, source.id, shortfall(state.players[playerId].pool, parsed))
     if (canPay(state.players[playerId].pool, parsed, extra)) return true
@@ -192,15 +239,10 @@ export function canCast(state: GameState, cardId: number): Refusal {
     if (state.stack.length > 0) return "the stack is not empty"
   }
 
-  const cost = parseCost(card.def.cost)
-  const extra = commanderTax(card)
-  const player = state.players[card.controller]
-  const untapped = battlefield(state, card.controller)
-    .filter((c) => !c.tapped && manaAbilityOf(c) !== null)
-    .reduce((n, c) => n + Math.max(0, netManaOf(c)), 0)
-  const floating =
-    player.pool.W + player.pool.U + player.pool.B + player.pool.R + player.pool.G + player.pool.C
-  if (floating + untapped < cost.generic + cost.pips.length + extra) return "not enough mana"
+  // An X spell is affordable at X=0; how large an X can be paid is maxX's job.
+  if (!canAfford(state, card.controller, card.def.cost, commanderTax(card))) {
+    return "not enough mana"
+  }
 
   return null
 }
@@ -314,14 +356,7 @@ export function canEquip(state: GameState, equipmentId: number, creatureId: numb
   if (equipment.attachedTo === creatureId) return "already attached to it"
 
   const cost = equipment.def.attach.equipCost ?? "{0}"
-  const parsed = parseCost(cost)
-  const player = state.players[equipment.controller]
-  const floating =
-    player.pool.W + player.pool.U + player.pool.B + player.pool.R + player.pool.G + player.pool.C
-  const untapped = battlefield(state, equipment.controller)
-    .filter((c) => !c.tapped && manaAbilityOf(c) !== null)
-    .reduce((n, c) => n + Math.max(0, netManaOf(c)), 0)
-  if (floating + untapped < costTotal(parsed)) return "not enough mana"
+  if (!canAfford(state, equipment.controller, cost)) return "not enough mana"
   return null
 }
 
