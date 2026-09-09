@@ -29,6 +29,8 @@ export interface EffectContext {
   controller: PlayerId
   source: GameCard | undefined
   targets: TargetRef[]
+  /** What X was paid, for effects that scale with it. */
+  x?: number
 }
 
 export function amountOf(ctx: EffectContext, amount: Amount): number {
@@ -44,7 +46,7 @@ export function amountOf(ctx: EffectContext, amount: Amount): number {
         0
       )
     case "x":
-      return 0
+      return ctx.x ?? 0
     default:
       return 0
   }

@@ -84,6 +84,7 @@ export function checkTriggers(state: GameState, event: GameEvent): void {
         controller: source.controller,
         effects: ability.effects,
         targets: autoTargets(state, source, ability.effects),
+        x: 0,
         description: `${source.def.name} triggers`,
       })
     }
@@ -143,6 +144,7 @@ export function resolveTop(state: GameState): boolean {
     controller: item.controller,
     source,
     targets: item.targets,
+    x: item.x,
   }
 
   if (item.kind === "spell" && source) {

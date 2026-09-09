@@ -18,7 +18,9 @@ export const poolTotal = (p: Pool): number =>
 export interface Cost {
   generic: number
   pips: ManaSymbol[]
-  /** Symbols the parser did not understand, such as {X} or hybrid. */
+  /** How many {X} symbols the cost has. */
+  x: number
+  /** Symbols the parser did not understand, such as hybrid. */
   unusual: string[]
 }
 
@@ -32,7 +34,7 @@ const SYMBOLS: ManaSymbol[] = ["W", "U", "B", "R", "G", "C"]
  * see that something was not understood instead of a spell going off cheap.
  */
 export function parseCost(cost: string): Cost {
-  const out: Cost = { generic: 0, pips: [], unusual: [] }
+  const out: Cost = { generic: 0, pips: [], x: 0, unusual: [] }
   for (const m of cost.matchAll(/\{([^}]+)\}/g)) {
     const sym = m[1].toUpperCase()
     const n = Number(sym)
@@ -44,9 +46,8 @@ export function parseCost(cost: string): Cost {
       out.pips.push(sym as ManaSymbol)
       continue
     }
-    // {X} counts as nothing until the engine supports choosing X.
     if (sym === "X") {
-      out.unusual.push(sym)
+      out.x += 1
       continue
     }
     // Hybrid and Phyrexian: charge the cheapest half, which is one generic.
@@ -56,7 +57,11 @@ export function parseCost(cost: string): Cost {
   return out
 }
 
+/** What the cost comes to, not counting X, which the caller chooses. */
 export const costTotal = (c: Cost): number => c.generic + c.pips.length
+
+/** Whether a cost has an X in it that the caller must choose a value for. */
+export const hasX = (c: Cost): boolean => c.x > 0
 
 /** Whether a pool could pay a cost, without changing it. */
 export function canPay(pool: Pool, cost: Cost, extraGeneric = 0): boolean {

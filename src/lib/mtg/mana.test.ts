@@ -1,7 +1,15 @@
 import { describe, it, expect } from "vitest"
 import { createGame, moveCard, battlefield } from "./state"
 import { cardDef, allDefs } from "./cards"
-import { autoTapFor, canCast, castSpell, netManaOf, tapForMana, shortfall } from "./actions"
+import {
+  autoTapFor,
+  canCast,
+  castSpell,
+  maxX,
+  netManaOf,
+  tapForMana,
+  shortfall,
+} from "./actions"
 import { parseCost, emptyPool } from "./mana"
 import { selfPlay } from "./duel"
 import { resolveAll } from "./stack"
@@ -214,5 +222,61 @@ describe("casting more than one spell in a main phase", () => {
     castSpell(g, toHand(g, "Llanowar Elves", 0).id)
     const second = toHand(g, "Llanowar Elves", 0)
     expect(canCast(g, second.id)).toBe("the stack is not empty")
+  })
+})
+
+/* ── X in costs ───────────────────────────────────────────────────────── */
+
+describe("X spells", () => {
+  it("reads X out of a cost", () => {
+    const c = parseCost("{X}{W}")
+    expect(c.x).toBe(1)
+    expect(c.pips).toEqual(["W"])
+    expect(c.generic).toBe(0)
+  })
+
+  it("works out the largest X that can be paid", () => {
+    const g = game()
+    for (let i = 0; i < 5; i++) put(g, "Plains", 0)
+    const spell = toHand(g, "Secure the Wastes", 0) // {X}{W}
+    expect(maxX(g, spell.id)).toBe(4)
+  })
+
+  it("makes X tokens and pays for them", () => {
+    const g = game()
+    for (let i = 0; i < 5; i++) put(g, "Plains", 0)
+    const spell = toHand(g, "Secure the Wastes", 0)
+    expect(castSpell(g, spell.id, [], 3)).toBe(true)
+    resolveAll(g)
+    const tokens = battlefield(g, 0).filter((c) => c.token)
+    expect(tokens).toHaveLength(3)
+    // One for the {W}, three for the X.
+    expect(battlefield(g, 0).filter((c) => c.tapped)).toHaveLength(4)
+  })
+
+  it("makes nothing at X of zero, and still costs the coloured pip", () => {
+    const g = game()
+    for (let i = 0; i < 5; i++) put(g, "Plains", 0)
+    castSpell(g, toHand(g, "Secure the Wastes", 0).id, [], 0)
+    resolveAll(g)
+    expect(battlefield(g, 0).filter((c) => c.token)).toHaveLength(0)
+    expect(battlefield(g, 0).filter((c) => c.tapped)).toHaveLength(1)
+  })
+
+  it("refuses an X larger than the mana available", () => {
+    const g = game()
+    for (let i = 0; i < 2; i++) put(g, "Plains", 0)
+    const spell = toHand(g, "Secure the Wastes", 0)
+    expect(castSpell(g, spell.id, [], 9)).toBe(false)
+  })
+
+  it("puts X counters on a creature with Tyvar's Stand", () => {
+    const g = game()
+    for (let i = 0; i < 4; i++) put(g, "Forest", 0)
+    const bear = put(g, "Beorn the Fierce", 0)
+    const spell = toHand(g, "Tyvar's Stand", 0) // {X}{G}
+    expect(castSpell(g, spell.id, [{ kind: "card", id: bear.id }], 2)).toBe(true)
+    resolveAll(g)
+    expect(bear.counters["+1/+1"]).toBe(2)
   })
 })

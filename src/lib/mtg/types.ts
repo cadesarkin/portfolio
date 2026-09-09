@@ -317,6 +317,8 @@ export interface StackItem {
   effects: Effect[]
   /** Chosen targets, by card id or player id. */
   targets: TargetRef[]
+  /** The value chosen for {X} when the spell was cast. */
+  x: number
   description: string
 }
 

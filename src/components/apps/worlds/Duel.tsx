@@ -12,9 +12,11 @@ import {
   castSpell,
   equip,
   manaAbilityOf,
+  maxX,
   playLand,
   tapForMana,
 } from "@/lib/mtg/actions"
+import { hasX, parseCost } from "@/lib/mtg/mana"
 import { useWindowKeys } from "@/components/desktop/use-window-keys"
 import {
   attachmentsOf,
@@ -64,6 +66,8 @@ export default function Duel({ winId }: { winId: string }) {
   const [hovered, setHovered] = useState<number | null>(null)
   /** Which zone is open in the side panel. */
   const [openZone, setOpenZone] = useState<"graveyard" | "exile" | "log">("log")
+  /** An X spell waiting for a value, and the value being chosen. */
+  const [choosingX, setChoosingX] = useState<{ card: number; value: number } | null>(null)
   const [inspect, setInspect] = useState<GameCard | null>(null)
   const seed = useRef(Math.floor(Math.random() * 100000))
 
@@ -137,6 +141,13 @@ export default function Duel({ winId }: { winId: string }) {
       return
     }
     if (canCast(state, card.id) !== null) return
+
+    // An X spell asks how much before anything else happens.
+    if (hasX(parseCost(card.def.cost)) && choosingX?.card !== card.id) {
+      setChoosingX({ card: card.id, value: maxX(state, card.id) })
+      return
+    }
+
     // A spell that chooses a target waits for one to be clicked.
     const needsTarget = card.def.abilities.some(
       (a) => a.kind === "spell" && a.effects.some((e) => "target" in e && e.target?.chosen)
@@ -146,7 +157,9 @@ export default function Duel({ winId }: { winId: string }) {
       return
     }
     setPicking(null)
-    castSpell(state, card.id)
+    const x = choosingX?.card === card.id ? choosingX.value : 0
+    setChoosingX(null)
+    castSpell(state, card.id, [], x)
     commit(state, runUntilPlayer(state))
   }
 
@@ -154,8 +167,10 @@ export default function Duel({ winId }: { winId: string }) {
     if (picking === null) return
     // Hexproof stops the choice being made at all, rather than fizzling later.
     if (!canTarget(state, target, HUMAN)) return
-    castSpell(state, picking, [{ kind: "card", id: target.id }])
+    const x = choosingX?.card === picking ? choosingX.value : 0
+    castSpell(state, picking, [{ kind: "card", id: target.id }], x)
     setPicking(null)
+    setChoosingX(null)
     commit(state, runUntilPlayer(state))
   }
 
@@ -429,7 +444,37 @@ export default function Duel({ winId }: { winId: string }) {
               next phase
             </button>
           )}
-          {(picking !== null || equipping !== null || blockTarget !== null) && (
+          {choosingX !== null && (
+            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
+              <span style={{ color: "#e4e0ee" }}>
+                X for {state.cards[choosingX.card]?.def.name}
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={Math.max(0, maxX(state, choosingX.card))}
+                value={choosingX.value}
+                onChange={(e) =>
+                  setChoosingX({ card: choosingX.card, value: Number(e.target.value) })
+                }
+                style={{ width: 110 }}
+              />
+              <span style={{ color: "#ffd166", fontWeight: 700, width: 18 }}>
+                {choosingX.value}
+              </span>
+              <button
+                type="button"
+                className="seg on-dark"
+                onClick={() => {
+                  const card = state.cards[choosingX.card]
+                  if (card) playFromHand(card)
+                }}
+              >
+                cast
+              </button>
+            </span>
+          )}
+          {(picking !== null || equipping !== null || blockTarget !== null || choosingX !== null) && (
             <button
               type="button"
               className="seg on-dark"
@@ -437,6 +482,7 @@ export default function Duel({ winId }: { winId: string }) {
                 setPicking(null)
                 setEquipping(null)
                 setBlockTarget(null)
+                setChoosingX(null)
               }}
             >
               cancel

@@ -646,6 +646,98 @@ export const ENCODED: Record<string, EncodedCard> = {
     ],
   },
 
+  /* ── X spells ───────────────────────────────────────────────────────── */
+
+  "Secure the Wastes": {
+    abilities: [
+      {
+        kind: "spell",
+        effects: [
+          {
+            do: "token",
+            count: { count: "x" },
+            token: {
+              name: "Warrior",
+              power: 1,
+              toughness: 1,
+              types: ["Creature"],
+              subtypes: ["Warrior"],
+              colours: ["W"],
+              keywords: [],
+            },
+          },
+        ],
+      },
+    ],
+  },
+
+  "Grand Crescendo": {
+    abilities: [
+      {
+        kind: "spell",
+        effects: [
+          {
+            do: "token",
+            count: { count: "x" },
+            token: {
+              name: "Citizen",
+              power: 1,
+              toughness: 1,
+              types: ["Creature"],
+              subtypes: ["Citizen"],
+              colours: ["G", "W"],
+              keywords: [],
+            },
+          },
+          {
+            do: "grant",
+            keyword: "indestructible",
+            target: { what: "creature", controller: "you", count: "all" },
+            until: "eot",
+          },
+        ],
+      },
+    ],
+  },
+
+  "Call the Coppercoats": {
+    abilities: [
+      {
+        kind: "spell",
+        effects: [
+          {
+            do: "token",
+            count: { count: "x" },
+            token: {
+              name: "Soldier",
+              power: 1,
+              toughness: 1,
+              types: ["Creature"],
+              subtypes: ["Human", "Soldier"],
+              colours: ["W"],
+              keywords: [],
+            },
+          },
+          { do: "unimplemented", note: "X counts the opponent's creatures, not the mana paid" },
+        ],
+      },
+    ],
+  },
+
+  "Tyvar's Stand": {
+    abilities: [
+      {
+        kind: "spell",
+        effects: [
+          { do: "counters", counter: "+1/+1", amount: { count: "x" }, target: yourCreature },
+          { do: "grant", keyword: "hexproof", target: yourCreature, until: "eot" },
+          { do: "grant", keyword: "indestructible", target: yourCreature, until: "eot" },
+          { do: "unimplemented", note: "the bonus is counters here rather than +X/+X for the turn" },
+        ],
+      },
+    ],
+  },
+
   /* ── Equipment ──────────────────────────────────────────────────────── */
 
   "Lightning Greaves": {

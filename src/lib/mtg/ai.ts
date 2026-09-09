@@ -8,7 +8,7 @@
  * watched.
  */
 
-import { canCast, canEquip, canPlayLand, castSpell, equip, playLand } from "./actions"
+import { canCast, canEquip, canPlayLand, castSpell, equip, maxX, playLand } from "./actions"
 import { isPermanent } from "./cards"
 import { canAttack, canBlock, declareAttackers, declareBlockers } from "./combat"
 import { hasKeyword, powerOf, toughnessOf } from "./continuous"
@@ -46,7 +46,9 @@ export function aiCastSpells(state: GameState, me: PlayerId, limit = 6): number 
 
     const pick = options[0]
     if (!pick) break
-    if (!castSpell(state, pick.id)) break
+    // An X spell is worth whatever is left over; holding the mana back does
+    // nothing, since the pool empties at the end of the step.
+    if (!castSpell(state, pick.id, [], maxX(state, pick.id))) break
     resolveAll(state)
     cast++
   }

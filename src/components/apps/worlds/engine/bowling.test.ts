@@ -274,15 +274,45 @@ describe("how often a roll strikes", () => {
 
 describe("curve", () => {
   const full = () => new Array(PIN_COUNT).fill(true)
+
+  /**
+   * Averaged over a fixed set of seeds rather than Math.random.
+   *
+   * The first version of this compared two averages taken from the real
+   * generator, and failed about one run in twenty on a margin of a tenth of a
+   * pin. A test that fails at random is worse than no test: it teaches you to
+   * re-run the suite instead of reading it.
+   */
+  const seeded = (seed: number) => () => {
+    seed = (seed * 1664525 + 1013904223) % 4294967296
+    return seed / 4294967296
+  }
   const avgPins = (roll: Roll, n = 4000): number => {
     let total = 0
-    for (let i = 0; i < n; i++) total += resolveRoll(full(), roll).filter(Boolean).length
+    for (let i = 0; i < n; i++) {
+      total += resolveRoll(full(), roll, seeded(i + 1)).filter(Boolean).length
+    }
     return total / n
   }
 
-  it("bends a wide ball back into the rack", () => {
-    // Starting outside the pins, hooking in beats holding the line.
-    expect(avgPins({ x: 0.3, curve: -0.35 })).toBeGreaterThan(avgPins({ x: 0.3, curve: 0 }))
+  /*
+   * Measured across the lane, averaged over 3000 seeded rolls:
+   *
+   *   x=0.20  straight 8.65   hook in 9.31   hook out 7.00
+   *   x=0.42  straight 6.96   hook in 8.76   hook out 0.00
+   *   x=0.58  straight 0.00   hook in 7.43   hook out 0.00
+   *
+   * The first version of this test asserted the same thing at x=0.30, where
+   * the difference is 8.29 against 8.33 — a position where the hook barely
+   * matters, so the assertion was really testing noise.
+   */
+  it("brings a ball that misses the rack entirely back into it", () => {
+    expect(avgPins({ x: 0.58, curve: 0 })).toBe(0)
+    expect(avgPins({ x: 0.58, curve: -0.35 })).toBeGreaterThan(5)
+  })
+
+  it("beats holding the line from out wide", () => {
+    expect(avgPins({ x: 0.5, curve: -0.35 })).toBeGreaterThan(avgPins({ x: 0.5, curve: 0 }))
   })
 
   it("takes a good line away when it hooks the wrong way", () => {
@@ -290,10 +320,6 @@ describe("curve", () => {
   })
 
   it("treats a bare number as a straight ball", () => {
-    const seeded = (seed: number) => () => {
-      seed = (seed * 1664525 + 1013904223) % 4294967296
-      return seed / 4294967296
-    }
     expect(resolveRoll(full(), 0.09, seeded(4))).toEqual(
       resolveRoll(full(), { x: 0.09, curve: 0, power: 1 }, seeded(4))
     )

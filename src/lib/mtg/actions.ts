@@ -224,15 +224,19 @@ export function canCast(state: GameState, cardId: number): Refusal {
 export function castSpell(
   state: GameState,
   cardId: number,
-  targets: TargetRef[] = []
+  targets: TargetRef[] = [],
+  x = 0
 ): boolean {
   if (canCast(state, cardId) !== null) return false
   const card = state.cards[cardId]
-  const extra = commanderTax(card)
+  const cost = parseCost(card.def.cost)
+  // Each {X} in the cost is paid for separately, as generic mana.
+  const chosenX = cost.x > 0 ? Math.max(0, x) : 0
+  const extra = commanderTax(card) + chosenX * cost.x
 
   if (!autoTapFor(state, card.controller, card.def.cost, extra)) return false
   const player = state.players[card.controller]
-  const paid = payFrom(player.pool, parseCost(card.def.cost), extra)
+  const paid = payFrom(player.pool, cost, extra)
   if (paid === null) return false
   player.pool = paid
 
@@ -252,9 +256,10 @@ export function castSpell(
     controller: card.controller,
     effects,
     targets,
+    x: chosenX,
     description: `${card.def.name} resolves`,
   })
-  log(state, `${subject(player.name, "cast")} ${card.def.name}`)
+  log(state, `${subject(player.name, "cast")} ${card.def.name}${chosenX > 0 ? ` for X=${chosenX}` : ""}`)
   checkTriggers(state, { type: "castSpell", card, controller: card.controller })
 
   // A spell with text nobody encoded still resolves as its body; say so once
@@ -264,6 +269,27 @@ export function castSpell(
   }
   stateBasedActions(state)
   return true
+}
+
+/**
+ * The largest X the caster could pay for right now.
+ *
+ * Everything spare after the fixed part of the cost, which is what a player
+ * would spend it on anyway.
+ */
+export function maxX(state: GameState, cardId: number): number {
+  const card = state.cards[cardId]
+  if (!card) return 0
+  const cost = parseCost(card.def.cost)
+  if (cost.x === 0) return 0
+  const player = state.players[card.controller]
+  const floating =
+    player.pool.W + player.pool.U + player.pool.B + player.pool.R + player.pool.G + player.pool.C
+  const untapped = battlefield(state, card.controller)
+    .filter((c) => !c.tapped && manaAbilityOf(c) !== null)
+    .reduce((n, c) => n + Math.max(0, netManaOf(c)), 0)
+  const spare = floating + untapped - costTotal(cost) - commanderTax(card)
+  return Math.max(0, Math.floor(spare / cost.x))
 }
 
 /** Mana empties between steps, as it does in a real game. */

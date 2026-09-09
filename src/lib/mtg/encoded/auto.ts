@@ -12,7 +12,7 @@
  * none of a sentence than half of it — half a card is a card that lies.
  */
 
-import type { Ability, Effect, Keyword, ManaOption, ManaSymbol, TokenSpec } from "../types"
+import type { Ability, Amount, Effect, Keyword, ManaOption, ManaSymbol, TokenSpec } from "../types"
 import { KEYWORDS } from "../types"
 
 export interface AutoEncoded {
@@ -72,13 +72,13 @@ function parseKeywordList(text: string): Keyword[] {
  * Returns null rather than guessing when the shape is not exactly this, which
  * is what stops "create a token that's a copy of..." coming out as a 0/0.
  */
-function parseToken(text: string): { count: number; token: TokenSpec } | null {
+function parseToken(text: string): { count: Amount; token: TokenSpec } | null {
   const m =
-    /^(a|an|one|two|three|four|five|\d+)\s+(\d+)\/(\d+)\s+([a-z ]*?)\s*([A-Z][A-Za-z]*(?:\s+[A-Z][A-Za-z]*)*)\s+creature tokens?(?:\s+with\s+(.+?))?$/.exec(
+    /^(a|an|one|two|three|four|five|X|\d+)\s+(\d+)\/(\d+)\s+([a-z ]*?)\s*([A-Z][A-Za-z]*(?:\s+[A-Z][A-Za-z]*)*)\s+creature tokens?(?:\s+with\s+(.+?))?$/.exec(
       text.trim()
     )
   if (!m) return null
-  const count = num(m[1])
+  const count: Amount | null = m[1].toUpperCase() === "X" ? { count: "x" } : num(m[1])
   const power = Number(m[2])
   const toughness = Number(m[3])
   if (count === null || !Number.isFinite(power) || !Number.isFinite(toughness)) return null
@@ -216,7 +216,8 @@ function parseEffect(sentence: string, self: string): Effect | null {
     }
   }
 
-  // Pump.
+  // Pump. A +X/+X is left to a hand-written entry: the buff is a fixed number
+  // here, and parsing X as zero would be a spell that does nothing.
   m = /^target creature gets \+(\d+)\/\+(\d+) until end of turn$/i.exec(s)
   if (m) {
     return {
