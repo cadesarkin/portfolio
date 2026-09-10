@@ -15,6 +15,7 @@ import { ThemeProvider, useTheme } from "./theme-context"
 import { WallpaperProvider, useWallpaper } from "./wallpaper-settings"
 import AppHost from "@/components/apps/AppHost"
 import { resolve } from "@/lib/vfs-utils"
+import { isFragmentWindow } from "@/lib/defrag/levels"
 
 const MOBILE_BREAKPOINT = 768
 
@@ -90,7 +91,7 @@ function Shell({ booted, onReboot }: { booted: boolean; onReboot: () => void }) 
       <DesktopSprites />
       <CrashSite isMobile={isMobile} />
       <Taskbar />
-      <Screensaver enabled={booted} />
+      <Screensaver enabled={booted && !wins.some((w) => isFragmentWindow(w.id))} />
     </>
   )
 }

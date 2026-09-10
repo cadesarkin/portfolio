@@ -165,6 +165,10 @@ body {
   cursor: move;
 }
 
+.win[data-locked] .win-bar {
+  cursor: default;
+}
+
 .win-title {
   font-size: 13px;
   letter-spacing: 0.04em;

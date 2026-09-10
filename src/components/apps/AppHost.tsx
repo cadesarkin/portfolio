@@ -15,6 +15,8 @@ import AsciiPaint from "./AsciiPaint"
 import Chiptune from "./Chiptune"
 import Leaderboard from "./Leaderboard"
 import Starmap from "./Starmap"
+import Defrag from "./defrag/Defrag"
+import FragmentView from "./defrag/FragmentView"
 import type { VNode } from "@/lib/vfs-types"
 
 interface Props {
@@ -60,6 +62,10 @@ export default function AppHost({ node, winId, isMobile, onReboot }: Props) {
           return <Leaderboard />
         case "starmap":
           return <Starmap winId={winId} isMobile={isMobile} />
+        case "defrag":
+          return <Defrag winId={winId} isMobile={isMobile} />
+        case "fragment":
+          return <FragmentView winId={winId} />
       }
     case "link":
       // Links navigate rather than open; this is unreachable in practice.

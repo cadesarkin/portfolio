@@ -378,6 +378,13 @@ export const root: VDir = {
       children: [
         {
           kind: "app",
+          name: "defrag",
+          app: "defrag",
+          icon: "game",
+          desc: "the machine is coming apart. put it back.",
+        },
+        {
+          kind: "app",
           name: "minesweeper",
           app: "minesweeper",
           icon: "game",

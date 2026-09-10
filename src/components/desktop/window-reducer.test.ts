@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"
 import {
   windowReducer as r,
   initialWindowState as init,
+  stackOrder,
   type WindowState,
 } from "./window-reducer"
 import { resolve } from "@/lib/vfs-utils"
@@ -132,5 +133,84 @@ describe("windowReducer", () => {
   it("titles a window from its label when one is set", () => {
     const s = open(init)
     expect(s.wins[0].title).toBe("work")
+  })
+})
+
+
+/* ── Windows a program opens for itself ───────────────────────────────── */
+
+describe("opening with options", () => {
+  const room = { x: 80, y: 96, w: 162, h: 147 }
+  const withId = (s: WindowState, id: string, extra = {}) =>
+    r(s, { type: "OPEN", node: work, opts: { id, rect: room, ...extra } })
+
+  it("opens the same node more than once under ids of its own", () => {
+    const s = withId(withId(init, "room:a"), "room:b")
+    expect(s.wins.map((w) => w.id)).toEqual(["room:a", "room:b"])
+  })
+
+  it("uses the rect and title it was given", () => {
+    const s = r(init, { type: "OPEN", node: work, opts: { id: "room:a", rect: room, title: "sector" } })
+    expect(s.wins[0].rect).toEqual(room)
+    expect(s.wins[0].title).toBe("sector")
+  })
+
+  it("still dedupes by its own id", () => {
+    const s = withId(withId(init, "room:a"), "room:a")
+    expect(s.wins).toHaveLength(1)
+  })
+})
+
+describe("what a window allows", () => {
+  const locked = { move: false, close: false, minimize: false, maximize: false, resize: false }
+  const lockedWin = (s: WindowState = init) =>
+    r(s, { type: "OPEN", node: work, opts: { id: "lock", allow: locked } })
+
+  it("refuses to close, minimize, maximize, move or resize a locked window", () => {
+    let s = lockedWin()
+    const before = s.wins[0]
+    s = r(s, { type: "CLOSE", id: "lock" })
+    s = r(s, { type: "MINIMIZE", id: "lock" })
+    s = r(s, { type: "MAXIMIZE", id: "lock" })
+    s = r(s, { type: "MOVE", id: "lock", rect: { x: 999 } })
+    s = r(s, { type: "RESIZE", id: "lock", rect: { w: 999 } })
+    expect(s.wins).toHaveLength(1)
+    expect(s.wins[0].state).toBe("normal")
+    expect(s.wins[0].rect).toEqual(before.rect)
+  })
+
+  /* The program that owns a locked window still has to place it and, when a
+     level ends, take it away. */
+  it("lets its owner move and close it with force", () => {
+    let s = lockedWin()
+    s = r(s, { type: "MOVE", id: "lock", rect: { x: 40 }, force: true })
+    expect(s.wins[0].rect.x).toBe(40)
+    s = r(s, { type: "CLOSE", id: "lock", force: true })
+    expect(s.wins).toHaveLength(0)
+  })
+
+  it("leaves a window that may not minimize alone on show desktop", () => {
+    let s = open(lockedWin(), projects)
+    s = r(s, { type: "MINIMIZE_ALL" })
+    expect(s.wins.find((w) => w.id === "lock")!.state).toBe("normal")
+    expect(s.wins.find((w) => w.id === "/projects")!.state).toBe("minimized")
+    expect(s.focused).toBe("lock")
+  })
+
+  it("still allows everything on an ordinary window", () => {
+    let s = open(init)
+    s = r(s, { type: "CLOSE", id: "/work" })
+    expect(s.wins).toHaveLength(0)
+  })
+})
+
+describe("always on top", () => {
+  it("stacks above a window with a higher z", () => {
+    expect(stackOrder({ z: 5, onTop: true })).toBeGreaterThan(stackOrder({ z: 900 }))
+  })
+
+  it("keeps its flag when opened", () => {
+    const s = r(init, { type: "OPEN", node: work, opts: { id: "top", onTop: true } })
+    expect(s.wins[0].onTop).toBe(true)
   })
 })

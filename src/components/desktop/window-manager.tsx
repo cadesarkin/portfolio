@@ -12,6 +12,7 @@ import {
 import {
   windowReducer,
   initialWindowState,
+  type OpenOptions,
   type Rect,
   type Win,
 } from "./window-reducer"
@@ -22,11 +23,12 @@ type KeyHandler = (e: KeyboardEvent) => void
 interface WindowApi {
   wins: Win[]
   focused: string | null
-  open: (node: VNode) => void
-  close: (id: string) => void
+  open: (node: VNode, opts?: OpenOptions) => void
+  /** `force` closes a window the user may not close, for the program that owns it. */
+  close: (id: string, force?: boolean) => void
   focus: (id: string) => void
-  move: (id: string, rect: Partial<Rect>) => void
-  resize: (id: string, rect: Partial<Rect>) => void
+  move: (id: string, rect: Partial<Rect>, force?: boolean) => void
+  resize: (id: string, rect: Partial<Rect>, force?: boolean) => void
   minimize: (id: string) => void
   minimizeAll: () => void
   maximize: (id: string) => void
@@ -111,11 +113,11 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
     () => ({
       wins: state.wins,
       focused: state.focused,
-      open: (node) => dispatch({ type: "OPEN", node }),
-      close: (id) => dispatch({ type: "CLOSE", id }),
+      open: (node, opts) => dispatch({ type: "OPEN", node, opts }),
+      close: (id, force) => dispatch({ type: "CLOSE", id, force }),
       focus: (id) => dispatch({ type: "FOCUS", id }),
-      move: (id, rect) => dispatch({ type: "MOVE", id, rect }),
-      resize: (id, rect) => dispatch({ type: "RESIZE", id, rect }),
+      move: (id, rect, force) => dispatch({ type: "MOVE", id, rect, force }),
+      resize: (id, rect, force) => dispatch({ type: "RESIZE", id, rect, force }),
       minimize: (id) => dispatch({ type: "MINIMIZE", id }),
       minimizeAll: () => dispatch({ type: "MINIMIZE_ALL" }),
       maximize: (id) => dispatch({ type: "MAXIMIZE", id }),

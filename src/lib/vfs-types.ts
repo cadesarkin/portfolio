@@ -19,6 +19,9 @@ export type AppKey =
   | "music"
   | "leaderboard"
   | "starmap"
+  | "defrag"
+  /** A room of defrag. Opened by the game, never from the filesystem. */
+  | "fragment"
 
 export type IconKey =
   | "folder"
