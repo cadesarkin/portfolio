@@ -11,7 +11,6 @@ export type AppKey =
   | "resume"
   | "contact"
   | "display"
-  | "cube-runner"
   | "minesweeper"
   | "snake"
   | "pong"

@@ -217,7 +217,7 @@ export default function Pong({
       const ph = PADDLE_H * h
       ctx.fillStyle = C.player
       ctx.fillRect(6, s.playerY * h - ph / 2, PADDLE_W, ph)
-      ctx.fillStyle = C.cubeTop
+      ctx.fillStyle = C.opponent
       ctx.fillRect(w - 6 - PADDLE_W, s.aiY * h - ph / 2, PADDLE_W, ph)
 
       ctx.fillStyle = C.ball

@@ -11,7 +11,7 @@ import {
   type Entry,
 } from "./leaderboard"
 
-const high = boardById("cube-runner")!
+const high = boardById("snake")!
 const low = boardById("minesweeper-expert")!
 const entry = (initials: string, score: number): Entry => ({
   initials,
@@ -184,7 +184,7 @@ describe("rank", () => {
 
 describe("formatScore", () => {
   it("adds thousands separators and the unit", () => {
-    expect(formatScore(high, 1420)).toBe("1,420 m")
+    expect(formatScore(high, 1420)).toBe("1,420 pts")
     expect(formatScore(low, 38)).toBe("38 s")
   })
 })

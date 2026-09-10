@@ -80,7 +80,7 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
   /**
    * One listener for every window.
    *
-   * Terminal, Snake, Cube Runner and Pong all want the arrow keys. If each
+   * Terminal, Snake and Pong all want the arrow keys. If each
    * attached its own window listener, typing in the terminal would steer the
    * snake. Routing through focus is what keeps them separate.
    */

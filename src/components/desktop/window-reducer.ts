@@ -60,7 +60,6 @@ const SIZES: Partial<Record<AppKey, { w: number; h: number }>> = {
   resume: { w: 860, h: 680 },
   contact: { w: 560, h: 330 },
   display: { w: 520, h: 440 },
-  "cube-runner": { w: 840, h: 600 },
   minesweeper: { w: 480, h: 560 },
   snake: { w: 660, h: 560 },
   pong: { w: 760, h: 500 },

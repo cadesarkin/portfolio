@@ -20,13 +20,6 @@ export interface Board {
 }
 
 export const BOARDS: Board[] = [
-  {
-    id: "cube-runner",
-    label: "cube runner",
-    direction: "high",
-    unit: "m",
-    max: 1_000_000,
-  },
   { id: "snake", label: "snake", direction: "high", unit: "pts", max: 10_000 },
   {
     id: "minesweeper-beginner",

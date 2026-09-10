@@ -7,7 +7,6 @@ import ResumeView from "./ResumeView"
 import Terminal from "./Terminal"
 import Minesweeper from "./games/Minesweeper"
 import Snake from "./games/Snake"
-import CubeRunner from "./games/CubeRunner"
 import Pong from "./games/Pong"
 import Solitaire from "./games/Solitaire"
 import DisplayProperties from "./DisplayProperties"
@@ -47,8 +46,6 @@ export default function AppHost({ node, winId, isMobile, onReboot }: Props) {
           return <Minesweeper isMobile={isMobile} />
         case "snake":
           return <Snake winId={winId} isMobile={isMobile} />
-        case "cube-runner":
-          return <CubeRunner winId={winId} isMobile={isMobile} />
         case "pong":
           return <Pong winId={winId} isMobile={isMobile} />
         case "solitaire":
