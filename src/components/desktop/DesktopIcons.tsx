@@ -12,11 +12,40 @@ interface Props {
 }
 
 export default function DesktopIcons({ isMobile, revealed }: Props) {
-  const { open } = useWindows()
-  const listRef = useRef<HTMLDivElement>(null)
   // Hidden nodes stay in the filesystem for the terminal but keep off the
   // desktop — the crash site is found on the plains, not in a list.
   const items = root.children.filter((n) => !n.hidden)
+
+  // On a phone everything shares one grid; there is no right-hand side to
+  // speak of.
+  if (isMobile) return <IconList items={items} isMobile revealed={revealed} />
+
+  return (
+    <>
+      <IconList items={items.filter((n) => n.side !== "right")} isMobile={false} revealed={revealed} />
+      <IconList
+        items={items.filter((n) => n.side === "right")}
+        isMobile={false}
+        revealed={revealed}
+        right
+      />
+    </>
+  )
+}
+
+function IconList({
+  items,
+  isMobile,
+  revealed,
+  right = false,
+}: {
+  items: VNode[]
+  isMobile: boolean
+  revealed: boolean
+  right?: boolean
+}) {
+  const { open } = useWindows()
+  const listRef = useRef<HTMLDivElement>(null)
 
   const activate = (node: VNode) => {
     if (node.kind === "link") {
@@ -42,23 +71,25 @@ export default function DesktopIcons({ isMobile, revealed }: Props) {
       [next]?.focus()
   }
 
+  if (items.length === 0) return null
+
   return (
     <div
       ref={listRef}
       style={{
         position: "fixed",
         top: 16,
-        left: 12,
+        left: right ? undefined : 12,
+        right: isMobile || right ? 12 : undefined,
         zIndex: 10,
         display: isMobile ? "grid" : "flex",
         gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : undefined,
         flexDirection: isMobile ? undefined : "column",
         gap: isMobile ? 8 : 2,
-        right: isMobile ? 12 : undefined,
         // Flow into a second column once the first runs out of height, the way
         // a real desktop does, rather than running off under the taskbar.
         flexWrap: isMobile ? undefined : "wrap",
-        alignContent: isMobile ? undefined : "flex-start",
+        alignContent: isMobile ? undefined : right ? "flex-end" : "flex-start",
         maxHeight: isMobile
           ? undefined
           : "calc(100vh - var(--taskbar-h) - 32px)",

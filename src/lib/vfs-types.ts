@@ -37,6 +37,7 @@ export type IconKey =
   | "music"
   | "trophy"
   | "starmap"
+  | "defrag"
 
 export interface VBase {
   /** Path segment, e.g. "vance". Unique among its siblings. */
@@ -53,6 +54,11 @@ export interface VBase {
    * the terminal should still be able to `open`.
    */
   hidden?: boolean
+  /**
+   * Placed in the desktop's right-hand column instead of the left. For a
+   * program that stands on its own rather than filed among the others.
+   */
+  side?: "right"
   /** One-line summary shown beside the name. */
   desc?: string
   icon?: IconKey

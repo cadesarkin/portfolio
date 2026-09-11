@@ -249,6 +249,34 @@ function StarmapIcon() {
   )
 }
 
+/** A disk being put back in order: the defragmenter's block map. */
+function DefragIcon() {
+  // Rows of blocks, settled on the left and still scattered on the right.
+  const blocks: [number, number, string][] = [
+    [2, 3, "#3f7fd6"], [5, 3, "#3f7fd6"], [8, 3, "#3f7fd6"], [11, 3, "#e0604f"],
+    [2, 6, "#3f7fd6"], [5, 6, "#3f7fd6"], [8, 6, "#f2f5f8"], [11, 6, "#3f7fd6"],
+    [2, 9, "#3f7fd6"], [5, 9, "#e0604f"], [8, 9, "#f2f5f8"], [11, 9, "#e0604f"],
+  ]
+  return (
+    <>
+      <rect x="1" y="2" width="14" height="12" fill="#0b1226" />
+      {blocks.map(([x, y, fill]) => (
+        <rect key={`${x},${y}`} x={x} y={y} width="2.4" height="2.2" fill={fill} />
+      ))}
+      <rect x="2" y="12" width="12" height="1" fill="#6ee08a" />
+      <rect
+        x="1"
+        y="2"
+        width="14"
+        height="12"
+        fill="none"
+        stroke={OUTLINE}
+        strokeWidth="1"
+      />
+    </>
+  )
+}
+
 const SHAPES: Record<IconKey, () => React.JSX.Element> = {
   folder: Folder,
   file: Doc,
@@ -263,6 +291,7 @@ const SHAPES: Record<IconKey, () => React.JSX.Element> = {
   music: Music,
   trophy: Trophy,
   starmap: StarmapIcon,
+  defrag: DefragIcon,
 }
 
 export function Icon({ name, size = 16 }: { name: IconKey; size?: number }) {
