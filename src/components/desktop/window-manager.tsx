@@ -12,9 +12,11 @@ import {
 import {
   windowReducer,
   initialWindowState,
+  type Allow,
   type OpenOptions,
   type Rect,
   type Win,
+  type WinGrid,
 } from "./window-reducer"
 import type { VNode } from "@/lib/vfs-types"
 
@@ -29,7 +31,12 @@ interface WindowApi {
   focus: (id: string) => void
   move: (id: string, rect: Partial<Rect>, force?: boolean) => void
   resize: (id: string, rect: Partial<Rect>, force?: boolean) => void
-  minimize: (id: string) => void
+  regrid: (id: string, grid: Partial<WinGrid>, rect?: Partial<Rect>, force?: boolean) => void
+  configure: (id: string, opts: { allow?: Allow; title?: string }) => void
+  /** Brings a window forward without taking focus. */
+  raise: (id: string) => void
+  /** `force` minimizes a window the user may not, for the program that owns it. */
+  minimize: (id: string, force?: boolean) => void
   minimizeAll: () => void
   maximize: (id: string) => void
   restore: (id: string) => void
@@ -118,7 +125,10 @@ export function WindowProvider({ children }: { children: React.ReactNode }) {
       focus: (id) => dispatch({ type: "FOCUS", id }),
       move: (id, rect, force) => dispatch({ type: "MOVE", id, rect, force }),
       resize: (id, rect, force) => dispatch({ type: "RESIZE", id, rect, force }),
-      minimize: (id) => dispatch({ type: "MINIMIZE", id }),
+      regrid: (id, grid, rect, force) => dispatch({ type: "REGRID", id, grid, rect, force }),
+      configure: (id, opts) => dispatch({ type: "CONFIGURE", id, ...opts }),
+      raise: (id) => dispatch({ type: "RAISE", id }),
+      minimize: (id, force) => dispatch({ type: "MINIMIZE", id, force }),
       minimizeAll: () => dispatch({ type: "MINIMIZE_ALL" }),
       maximize: (id) => dispatch({ type: "MAXIMIZE", id }),
       restore: (id) => dispatch({ type: "RESTORE", id }),

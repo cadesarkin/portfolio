@@ -31,6 +31,19 @@ export interface WinGrid {
   ch: number
   cols?: number
   rows?: number
+  /**
+   * Set when the content is bigger than the window, which then shows a crop
+   * of it: the cell at the content area's top-left. Resizing such a window
+   * from any edge moves the crop, never the content.
+   */
+  ox?: number
+  oy?: number
+  /** The whole content, in cells. Set on a window that can be cropped. */
+  max?: { cols: number; rows: number }
+  /** The smallest crop allowed, in cells. */
+  min?: { cols: number; rows: number }
+  /** A cell of the content that a crop may not cut out. */
+  keep?: { x: number; y: number } | null
 }
 
 export interface Win {
@@ -47,6 +60,8 @@ export interface Win {
   grid?: WinGrid
   /** Drawn over every window without it, whatever has focus. */
   onTop?: boolean
+  /** Left off the taskbar: part of something else, not a thing to switch to. */
+  skipTaskbar?: boolean
 }
 
 /** Options for opening a window that is not simply a VFS node. */
@@ -61,6 +76,7 @@ export interface OpenOptions {
   allow?: Allow
   grid?: WinGrid
   onTop?: boolean
+  skipTaskbar?: boolean
 }
 
 /**
@@ -92,7 +108,13 @@ export type WindowAction =
    */
   | { type: "MOVE"; id: string; rect: Partial<Rect>; force?: boolean }
   | { type: "RESIZE"; id: string; rect: Partial<Rect>; force?: boolean }
-  | { type: "MINIMIZE"; id: string }
+  /** Geometry and grid together, so a crop never paints half applied. */
+  | { type: "REGRID"; id: string; rect?: Partial<Rect>; grid: Partial<WinGrid>; force?: boolean }
+  /** What a user may now do to a window, and what it is called. For its owner. */
+  | { type: "CONFIGURE"; id: string; allow?: Allow; title?: string }
+  /** Brings a window forward without taking focus — the keyboard stays put. */
+  | { type: "RAISE"; id: string }
+  | { type: "MINIMIZE"; id: string; force?: boolean }
   | { type: "MINIMIZE_ALL" }
   | { type: "MAXIMIZE"; id: string }
   | { type: "RESTORE"; id: string }
@@ -194,6 +216,7 @@ export function windowReducer(
         ...(opts?.allow && { allow: opts.allow }),
         ...(opts?.grid && { grid: opts.grid }),
         ...(opts?.onTop && { onTop: true }),
+        ...(opts?.skipTaskbar && { skipTaskbar: true }),
       }
       return {
         ...state,
@@ -248,9 +271,57 @@ export function windowReducer(
       }
     }
 
+    case "REGRID": {
+      const target = state.wins.find((w) => w.id === action.id)
+      if (!target?.grid) return state
+      if (!allowed(target, "resize") && !action.force) return state
+      return {
+        ...state,
+        wins: state.wins.map((w) =>
+          w.id === action.id
+            ? {
+                ...w,
+                rect: { ...w.rect, ...action.rect },
+                grid: { ...w.grid!, ...action.grid },
+              }
+            : w
+        ),
+      }
+    }
+
+    case "CONFIGURE": {
+      if (!state.wins.some((w) => w.id === action.id)) return state
+      return {
+        ...state,
+        wins: state.wins.map((w) =>
+          w.id === action.id
+            ? {
+                ...w,
+                ...(action.allow && { allow: action.allow }),
+                ...(action.title !== undefined && { title: action.title }),
+              }
+            : w
+        ),
+      }
+    }
+
+    case "RAISE": {
+      if (!state.wins.some((w) => w.id === action.id)) return state
+      const z = state.zTop + 1
+      return {
+        ...state,
+        zTop: z,
+        wins: state.wins.map((w) =>
+          w.id === action.id
+            ? { ...w, z, state: w.state === "minimized" ? "normal" : w.state }
+            : w
+        ),
+      }
+    }
+
     case "MINIMIZE": {
       const target = state.wins.find((w) => w.id === action.id)
-      if (!target || !allowed(target, "minimize")) return state
+      if (!target || (!allowed(target, "minimize") && !action.force)) return state
       const wins = state.wins.map((w) =>
         w.id === action.id ? { ...w, state: "minimized" as const } : w
       )

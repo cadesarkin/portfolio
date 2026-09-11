@@ -237,6 +237,52 @@ body {
   );
 }
 
+/* Edges of a window that crops its content: grab one to cut. They hang just
+   outside the border so the title bar keeps its whole width for dragging. */
+.win-edge {
+  position: absolute;
+  touch-action: none;
+  z-index: 1;
+}
+.win-edge-n,
+.win-edge-s {
+  left: 6px;
+  right: 6px;
+  height: 8px;
+}
+.win-edge-e,
+.win-edge-w {
+  top: 6px;
+  bottom: 6px;
+  width: 8px;
+}
+.win-edge-n { top: -5px; }
+.win-edge-s { bottom: -5px; }
+.win-edge-e { right: -5px; }
+.win-edge-w { left: -5px; }
+.win-edge-ne,
+.win-edge-nw,
+.win-edge-se,
+.win-edge-sw {
+  width: 12px;
+  height: 12px;
+}
+.win-edge-ne { top: -5px; right: -5px; }
+.win-edge-nw { top: -5px; left: -5px; }
+.win-edge-se { bottom: -5px; right: -5px; }
+.win-edge-sw { bottom: -5px; left: -5px; }
+
+/* Content laid out to the cell is solid: in a game where windows cover each
+   other on purpose, what is behind one must not show through it. */
+.win[data-grid] {
+  opacity: 1;
+}
+
+/* A croppable window says so: its border is cut into dashes. */
+.win[data-crop] {
+  border-style: dashed;
+}
+
 /* ── Desktop icons ───────────────────────────────────────── */
 
 .icon-btn {

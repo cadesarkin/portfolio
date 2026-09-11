@@ -214,3 +214,59 @@ describe("always on top", () => {
     expect(s.wins[0].onTop).toBe(true)
   })
 })
+
+describe("windows a program keeps changing", () => {
+  const grid = { cw: 10, ch: 20, cols: 8, rows: 4, max: { cols: 20, rows: 6 } }
+  const room = (allow = {}) =>
+    r(init, { type: "OPEN", node: work, opts: { id: "room", grid, allow, skipTaskbar: true } })
+
+  it("crops: geometry and grid change together", () => {
+    const s = r(room(), {
+      type: "REGRID",
+      id: "room",
+      rect: { x: 30, w: 52 },
+      grid: { ox: 3, cols: 5 },
+    })
+    expect(s.wins[0].rect).toMatchObject({ x: 30, w: 52 })
+    expect(s.wins[0].grid).toMatchObject({ ox: 3, cols: 5, rows: 4, max: { cols: 20, rows: 6 } })
+  })
+
+  it("refuses a crop the window does not allow, unless its owner forces it", () => {
+    let s = room({ resize: false })
+    s = r(s, { type: "REGRID", id: "room", grid: { cols: 5 } })
+    expect(s.wins[0].grid?.cols).toBe(8)
+    s = r(s, { type: "REGRID", id: "room", grid: { keep: { x: 1, y: 1 } }, force: true })
+    expect(s.wins[0].grid?.keep).toEqual({ x: 1, y: 1 })
+  })
+
+  it("releases a window by changing what it allows, and renames it", () => {
+    let s = room({ move: false })
+    s = r(s, { type: "CONFIGURE", id: "room", allow: { move: true }, title: "free" })
+    expect(s.wins[0].allow).toEqual({ move: true })
+    expect(s.wins[0].title).toBe("free")
+  })
+
+  /* A window that jumps in front must not take the keyboard with it: the
+     player may be typing in another window when it does. */
+  it("raises a window without taking focus, restoring it if minimized", () => {
+    let s = open(room(), projects)
+    s = r(s, { type: "MINIMIZE", id: "room", force: true })
+    expect(s.wins[0].state).toBe("minimized")
+    s = r(s, { type: "RAISE", id: "room" })
+    expect(s.wins[0].state).toBe("normal")
+    expect(s.focused).toBe("/projects")
+    expect(s.wins[0].z).toBeGreaterThan(s.wins[1].z)
+  })
+
+  it("minimizes a window that may not minimize only when forced", () => {
+    let s = room({ minimize: false })
+    s = r(s, { type: "MINIMIZE", id: "room" })
+    expect(s.wins[0].state).toBe("normal")
+    s = r(s, { type: "MINIMIZE", id: "room", force: true })
+    expect(s.wins[0].state).toBe("minimized")
+  })
+
+  it("remembers to stay off the taskbar", () => {
+    expect(room().wins[0].skipTaskbar).toBe(true)
+  })
+})

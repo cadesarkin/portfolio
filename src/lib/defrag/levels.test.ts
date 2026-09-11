@@ -1,168 +1,225 @@
 import { describe, it, expect } from "vitest"
-import { CONTROLLER_W, LEVELS, MIN_VIEW, fragmentsOf, startOf, type Level } from "./levels"
+import { CHAPTERS, LEVELS, MIN_VIEW, playCols, roomsOf, type Level } from "./levels"
+import { CELL_H, TASKBAR_H, type Fragment } from "./engine"
 import {
-  CELL_W,
-  CELL_H,
-  CHROME,
-  TASKBAR_H,
-  placementAt,
-  step,
-  type Dir,
-  type Placement,
-  type Player,
-} from "./engine"
+  apply,
+  firstMoves,
+  initialSim,
+  placementsOf,
+  playSolution,
+  renderScreen,
+  solvableOnFoot,
+  type SimState,
+} from "./simulate"
 
-const VIEW = { w: 1280, h: 720 }
-const DIRS: Dir[] = ["up", "down", "left", "right"]
+/** A big screen too: a level must not lean on the right or bottom edge being near. */
+const BIG = { w: 1920, h: 1080 }
 
-/** Every window of a level laid out, with an optional stacking order. */
-function layout(
-  level: Level,
-  where: "start" | "solution",
-  order?: string[]
-): Placement[] {
-  const frags = fragmentsOf(level)
-  return level.fragments.map((f, i) => {
-    const cell =
-      where === "solution" && !f.locked ? (level.solution.at[f.id] ?? f.at) : f.at
-    const rank = order ? order.indexOf(f.id) : i
-    // On-top windows sit above everything, as the window manager draws them.
-    const z = (f.onTop ? 1000 : 0) + (rank < 0 ? i : rank)
-    return placementAt(`defrag:${f.id}`, frags[f.id], cell.col, cell.row, z)
-  })
-}
-
-/** Can the player walk from the start to the exit in this layout? */
-function solvable(level: Level, placements: Placement[]): boolean {
-  const frags = fragmentsOf(level)
-  const start = startOf(level)
-  const key = (p: Player) => `${p.frag}:${p.x},${p.y}`
-  const seen = new Set([key(start)])
-  const queue: Player[] = [start]
-  while (queue.length) {
-    const here = queue.shift()!
-    for (const dir of DIRS) {
-      const r = step(here, dir, placements, frags, VIEW)
-      if (!r.moved) continue
-      if (r.won) return true
-      if (seen.has(key(r.player))) continue
-      seen.add(key(r.player))
-      queue.push(r.player)
-    }
+/** Every tile in a level holding one of these glyphs, as "room:x,y". */
+function tilesOf(level: Level, glyphs: string): string[] {
+  const out: string[] = []
+  for (const f of Object.values(roomsOf(level))) {
+    f.tiles.forEach((row, y) =>
+      [...row].forEach((ch, x) => glyphs.includes(ch) && out.push(`${f.id}:${x},${y}`))
+    )
   }
-  return false
+  return out
 }
+
+const floorNextTo = (f: Fragment, x: number, y: number): boolean =>
+  [
+    [x - 1, y],
+    [x + 1, y],
+    [x, y - 1],
+    [x, y + 1],
+  ].some(([nx, ny]) => ".>@".includes(f.tiles[ny]?.[nx] ?? " "))
+
+describe("the game", () => {
+  it("has fifteen levels across its three chapters, in order", () => {
+    expect(LEVELS).toHaveLength(15)
+    const chapters = LEVELS.map((l) => l.chapter)
+    expect([...chapters].sort()).toEqual(chapters)
+    for (let c = 0; c < CHAPTERS.length; c++) expect(chapters).toContain(c)
+  })
+
+  it("never reuses a level id", () => {
+    expect(new Set(LEVELS.map((l) => l.id)).size).toBe(LEVELS.length)
+  })
+})
 
 describe("every level", () => {
   for (const level of LEVELS) {
     describe(level.name, () => {
+      const frags = roomsOf(level)
+
       it("has exactly one start and one exit", () => {
-        const frags = Object.values(fragmentsOf(level))
-        expect(frags.filter((f) => f.start)).toHaveLength(1)
-        expect(frags.filter((f) => f.exit)).toHaveLength(1)
+        const all = Object.values(frags)
+        expect(all.filter((f) => f.start)).toHaveLength(1)
+        expect(all.filter((f) => f.exit)).toHaveLength(1)
       })
 
-      /* The point of the test file: a level that cannot be finished is the
-         worst bug a puzzle game can ship, and it is invisible until someone
-         spends ten minutes finding out. */
+      /*
+       * Any symbol not in the tile table is wall, which is what lets a room
+       * carry art — and what makes a stray `$` in a picture a key. Every
+       * special tile has to be one the level means.
+       */
+      it("only has special tiles where it means them", () => {
+        for (const at of tilesOf(level, "$%")) {
+          const [id, xy] = at.split(":")
+          const [x, y] = xy.split(",").map(Number)
+          expect(floorNextTo(frags[id], x, y), `${at} is not next to any floor`).toBe(true)
+        }
+        expect(tilesOf(level, "^").sort()).toEqual(Object.keys(level.triggers ?? {}).sort())
+        expect(tilesOf(level, "?").sort()).toEqual(Object.keys(level.notes ?? {}).sort())
+        const gates = tilesOf(level, "+=")
+        const flips = Object.values(level.triggers ?? {}).some((t) =>
+          t.some((x) => x.kind === "gates")
+        )
+        if (gates.length) expect(flips, `gates at ${gates[0]} but no switch flips them`).toBe(true)
+        expect(tilesOf(level, "$").length).toBeGreaterThanOrEqual(tilesOf(level, "%").length)
+      })
+
+      it("can kill every process it names, and names only its own", () => {
+        const pids = level.rooms.flatMap((r) => (r.pid ? [r.pid] : []))
+        const named = Object.values(level.notes ?? {}).flatMap((n) => n.reveals ?? [])
+        expect([...named].sort()).toEqual([...pids].sort())
+      })
+
+      /* The point of this file: a level that cannot be finished is the worst
+         bug a puzzle game can ship, and it is invisible until someone has
+         spent ten minutes finding out. */
       it("can be finished", () => {
-        expect(solvable(level, layout(level, "solution", level.solution.order))).toBe(true)
+        const out = playSolution(level, MIN_VIEW)
+        const last = out.states[out.states.length - 1]
+        const why = out.ok
+          ? ""
+          : `step ${out.at}: ${out.reason}\n${renderScreen(level, last, MIN_VIEW)}`
+        expect(out.ok, why).toBe(true)
       })
 
-      it("is not finished before the player moves anything", () => {
-        expect(solvable(level, layout(level, "start"))).toBe(false)
+      it("is not finished before the player touches anything", () => {
+        expect(solvableOnFoot(level, initialSim(level), MIN_VIEW)).toBe(false)
       })
 
-      it("fits on the smallest supported screen", () => {
-        for (const where of ["start", "solution"] as const) {
-          for (const p of layout(level, where)) {
-            expect(p.outer.x, `${p.id} ${where}`).toBeGreaterThanOrEqual(0)
-            expect(p.outer.y, `${p.id} ${where}`).toBeGreaterThanOrEqual(0)
-            expect(p.outer.x + p.outer.w, `${p.id} ${where}`).toBeLessThanOrEqual(
-              MIN_VIEW.w - CONTROLLER_W - 16
-            )
-            expect(p.outer.y + p.outer.h, `${p.id} ${where}`).toBeLessThanOrEqual(
-              MIN_VIEW.h - TASKBAR_H
-            )
+      /* Every level asks for at least two things to be done to the windows.
+         Checked on a small and a big screen, since a big one leaves room a
+         level might have been counting on not being there. */
+      for (const view of [MIN_VIEW, BIG]) {
+        it(`cannot be finished with one move on a ${view.w}×${view.h} screen`, () => {
+          const s0 = initialSim(level)
+          const winner = firstMoves(level, s0, view).find((m) =>
+            solvableOnFoot(level, apply(level, s0, m, view), view)
+          )
+          expect(winner).toBeUndefined()
+        })
+      }
+
+      it("fits on the smallest supported screen, from start to finish", () => {
+        const out = playSolution(level, MIN_VIEW)
+        const rows = Math.floor((MIN_VIEW.h - TASKBAR_H) / CELL_H)
+        const check = (s: SimState, when: string) => {
+          for (const p of placementsOf(level, s)) {
+            const where = `${p.frag} ${when}`
+            expect(p.outer.x, where).toBeGreaterThanOrEqual(0)
+            expect(p.outer.y, where).toBeGreaterThanOrEqual(0)
+            expect(p.body.x + p.body.w, where).toBeLessThanOrEqual(playCols(MIN_VIEW) * 10)
+            expect(p.body.y + p.body.h, where).toBeLessThanOrEqual(rows * CELL_H)
           }
         }
+        out.states.forEach((s, i) => check(s, `after step ${i}`))
+        for (const r of level.rooms) {
+          if (r.hostile?.kind !== "wander") continue
+          let s = initialSim(level)
+          r.hostile.spots.forEach((_, i) => {
+            s = apply(level, s, { hostile: r.id, state: i }, MIN_VIEW)
+            check(s, `at spot ${i}`)
+          })
+        }
       })
 
-      it("only asks to move windows that can move", () => {
-        for (const id of Object.keys(level.solution.at)) {
-          const f = level.fragments.find((x) => x.id === id)
-          expect(f, id).toBeDefined()
-          expect(f!.locked, `${id} is locked but the solution moves it`).toBeFalsy()
+      it("only lets hostile windows do what their timers would", () => {
+        const last: Record<string, number | string> = {}
+        for (const r of level.rooms) {
+          if (r.hostile?.kind === "wander") last[r.id] = 0
+          if (r.hostile?.kind === "blink") last[r.id] = "up"
+        }
+        for (const m of level.solution) {
+          if (!("hostile" in m)) continue
+          const h = level.rooms.find((r) => r.id === m.hostile)!.hostile!
+          if (h.kind === "wander") {
+            expect(m.state, `${m.hostile} hops in order`).toBe(
+              ((last[m.hostile] as number) + 1) % h.spots.length
+            )
+          }
+          if (h.kind === "blink") expect(m.state).not.toBe(last[m.hostile])
+          last[m.hostile] = m.state ?? ""
         }
       })
     })
   }
 })
 
-describe("what each level teaches", () => {
-  /* "tuck" exists to teach that going down needs the upper window on top.
-     If it could be solved with the lower window on top, it would not. */
-  it("tuck cannot be crossed with the lower window on top", () => {
-    const tuck = LEVELS.find((l) => l.id === "tuck")!
-    expect(solvable(tuck, layout(tuck, "solution", ["c", "a", "b"]))).toBe(false)
-    expect(solvable(tuck, layout(tuck, "solution", ["c", "b", "a"]))).toBe(true)
+/* What each level is there to teach, checked: the lesson has to be the only
+   way through, or the level teaches nothing. */
+describe("lessons", () => {
+  const byId = (id: string) => LEVELS.find((l) => l.id === id)!
+
+  it("ferry: no room placed anywhere makes a bridge", () => {
+    const level = byId("ferry")
+    const s0 = initialSim(level)
+    const bridges = firstMoves(level, s0, BIG).filter(
+      (m) => "place" in m && solvableOnFoot(level, apply(level, s0, m, BIG), BIG)
+    )
+    expect(bridges).toEqual([])
   })
 
-  /* "watchdog" puts a window over the obvious straight route. The straight
-     corridor must genuinely be blocked, or the level teaches nothing. */
-  it("watchdog blocks the straight corridor", () => {
-    const wd = LEVELS.find((l) => l.id === "watchdog")!
-    const frags = fragmentsOf(wd)
-    const placements = layout(wd, "solution")
-    // Stand at the left end of the bridge's top corridor and try to walk
-    // along it: the watchdog covers the rest.
-    const r = step({ frag: "b", x: 1, y: 1 }, "right", placements, frags, VIEW)
-    expect(r.moved).toBe(false)
-    expect(r.blocked).toBe("hidden")
+  it("tuck: the right layout with the wrong window in front does not work", () => {
+    const level = byId("tuck")
+    let s = initialSim(level)
+    // The solution's drags, the other way round: the lower room ends up in front.
+    s = apply(level, s, { place: "b", col: 22, row: 3 }, MIN_VIEW)
+    s = apply(level, s, { place: "c", col: 26, row: 11 }, MIN_VIEW)
+    expect(solvableOnFoot(level, s, MIN_VIEW)).toBe(false)
+    s = apply(level, s, { raise: "b" }, MIN_VIEW)
+    expect(solvableOnFoot(level, s, MIN_VIEW)).toBe(true)
   })
 
-  it("keeps the chrome the rules assume", () => {
-    // Layouts are designed in cells around these numbers; if they change,
-    // every level needs re-checking, so fail loudly here.
-    expect(CELL_W).toBe(10)
-    expect(CELL_H).toBe(20)
-    expect(CHROME.top).toBe(34)
-  })
-})
-
-describe("no shortcuts", () => {
-  /* The concept is that rooms join where their edges line up. If overlapping
-     two rooms also joined them, every level could be skipped by dropping the
-     exit room on top of the start room — so this checks, for every level,
-     that no single placement of the exit room onto the start room wins. */
-  for (const level of LEVELS) {
-    it(`${level.name} cannot be skipped by stacking the exit room on the start room`, () => {
-      const frags = fragmentsOf(level)
-      const start = startOf(level)
-      const exitFrag = Object.values(frags).find((f) => f.exit)!
-      const startDef = level.fragments.find((f) => f.id === start.frag)!
-      const exitDef = level.fragments.find((f) => f.id === exitFrag.id)!
-      if (exitDef.locked) return
-
-      const base = layout(level, "start")
-      const startP = base.find((p) => p.id === `defrag:${start.frag}`)!
-      const s = frags[start.frag]
-      let skipped = false
-      // Every overlapping offset of the exit room over the start room.
-      for (let dc = -exitFrag.cols + 1; dc < s.cols && !skipped; dc++) {
-        for (let dr = -exitFrag.rows + 1; dr < s.rows && !skipped; dr++) {
-          const col = startDef.at.col + dc
-          const row = startDef.at.row + dr
-          if (col < 0 || row < 3) continue
-          const moved = base.map((p) =>
-            p.id === `defrag:${exitFrag.id}`
-              ? placementAt(p.id, exitFrag, col, row, startP.z + 50)
-              : p
-          )
-          if (solvable(level, moved)) skipped = true
-        }
+  it("cut: the pipe does not fit the gap uncut", () => {
+    const level = byId("cut")
+    const s0 = initialSim(level)
+    for (let row = 2; row < 20; row++) {
+      for (let col = 1; col < 40; col++) {
+        const s = apply(level, s0, { place: "m", col, row }, MIN_VIEW)
+        expect(solvableOnFoot(level, s, MIN_VIEW), `pipe at ${col},${row}`).toBe(false)
       }
-      expect(skipped).toBe(false)
-    })
-  }
+    }
+  })
+
+  it("keys: the door will not open without the key", () => {
+    const level = byId("keys")
+    let s = initialSim(level)
+    s = apply(level, s, { place: "d", col: 17, row: 8 }, MIN_VIEW)
+    expect(solvableOnFoot(level, s, MIN_VIEW)).toBe(false)
+  })
+
+  it("kill: the pid cannot be killed before a note has named it", () => {
+    const level = byId("kill")
+    expect(() => apply(level, initialSim(level), { kill: 4127 }, MIN_VIEW)).toThrow(/not found/)
+  })
+
+  it("fragmentation: the held room will not move until the switch lets it go", () => {
+    const level = byId("fragmentation")
+    const move = { place: "l", col: 22, row: 9 }
+    expect(() => apply(level, initialSim(level), move, MIN_VIEW)).toThrow(/will not move/)
+  })
+
+  it("blink: the key cannot be reached while the blinking window is up", () => {
+    const level = byId("blink")
+    let s = initialSim(level)
+    s = apply(level, s, { place: "c", col: 7, row: 9 }, MIN_VIEW)
+    s = apply(level, s, { raise: "a" }, MIN_VIEW)
+    expect(() => apply(level, s, { walk: { room: "k", x: 12, y: 1 } }, MIN_VIEW)).toThrow()
+    s = apply(level, s, { hostile: "q", state: "down" }, MIN_VIEW)
+    expect(() => apply(level, s, { walk: { room: "k", x: 12, y: 1 } }, MIN_VIEW)).not.toThrow()
+  })
 })

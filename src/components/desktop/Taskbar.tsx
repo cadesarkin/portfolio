@@ -38,7 +38,7 @@ export default function Taskbar() {
       <button type="button" onClick={minimizeAll} title="Show desktop">
         ~
       </button>
-      {wins.map((w) => (
+      {wins.filter((w) => !w.skipTaskbar).map((w) => (
         <button
           key={w.id}
           type="button"

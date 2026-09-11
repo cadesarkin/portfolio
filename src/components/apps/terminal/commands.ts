@@ -11,6 +11,7 @@ import { root } from "@/lib/vfs"
 import { isDir, type VDir, type VNode } from "@/lib/vfs-types"
 import { IDENTITY, SKILLS, ROLES, tenure } from "@/lib/resume"
 import { tokenize, nearest } from "./parse"
+import { killProcess, processes } from "@/lib/defrag/store"
 
 export type Tone = "out" | "err" | "dim" | "accent" | "prompt"
 
@@ -45,6 +46,16 @@ interface Cmd {
   help: string
   run: (args: string[], cwd: string) => CmdResult
 }
+
+/**
+ * Processes that are always there. They cannot be killed; the ones that can
+ * belong to defrag, and appear only while a level of it is running.
+ */
+const SYSTEM_PROCS: { pid: number; name: string }[] = [
+  { pid: 88, name: "desktop" },
+  { pid: 204, name: "wallpaper" },
+  { pid: 311, name: "terminal" },
+]
 
 const out = (...text: string[]): Line[] => text.map((t) => ({ text: t }))
 const err = (text: string): Line[] => [{ text, tone: "err" }]
@@ -308,6 +319,40 @@ export const COMMANDS: Record<string, Cmd> = {
         return { lines: dim(`theme -> ${arg}`), theme: arg }
       if (arg === "toggle") return { theme: "toggle" }
       return { lines: err("usage: theme [day|night|toggle]") }
+    },
+  },
+
+  ps: {
+    help: "list running processes",
+    run: () => {
+      const game = processes()
+      const rows = [...SYSTEM_PROCS, ...game.map((p) => ({ ...p, pid: p.known ? p.pid : null }))]
+      return {
+        lines: [
+          ...dim("  PID  NAME"),
+          ...rows.map((p) => ({
+            text: `${(p.pid === null ? "????" : String(p.pid)).padStart(5)}  ${p.name}`,
+            tone: p.pid === null ? ("accent" as const) : undefined,
+          })),
+          ...(game.some((p) => !p.known)
+            ? dim("", "???? — a pid you have not found written down yet.")
+            : []),
+        ],
+      }
+    },
+  },
+
+  kill: {
+    help: "stop a process by its pid",
+    run: (args) => {
+      const target = args.find((a) => !a.startsWith("-"))
+      const pid = Number(target)
+      if (!target || !Number.isInteger(pid) || pid < 0) return { lines: err("usage: kill <pid>") }
+      if (SYSTEM_PROCS.some((p) => p.pid === pid)) {
+        return { lines: err(`kill: (${pid}) - operation not permitted`) }
+      }
+      const r = killProcess(pid)
+      return { lines: r.ok ? out(r.message) : err(r.message) }
     },
   },
 
