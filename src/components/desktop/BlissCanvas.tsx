@@ -20,7 +20,14 @@ import {
   starCells,
   type Ambient,
 } from "@/lib/ambient"
-import { createFire, stepFire, emberCell, type Fire } from "@/lib/embers"
+import {
+  FULL_FIRE,
+  createFire,
+  stepFire,
+  emberCell,
+  type Fire,
+  type FireMix,
+} from "@/lib/embers"
 import { WALLPAPER, type RGB, type Theme } from "@/lib/theme"
 import {
   DEFAULT_SETTINGS,
@@ -32,6 +39,8 @@ interface Props {
   paused?: boolean
   theme?: Theme
   settings?: WallpaperSettings
+  /** How hard the crash site is burning, read every frame. Full fire when unset. */
+  fireMix?: React.MutableRefObject<FireMix>
 }
 
 /** Seconds for a full day/night crossfade. */
@@ -49,6 +58,7 @@ export default function BlissCanvas({
   paused = false,
   theme = "day",
   settings = DEFAULT_SETTINGS,
+  fireMix,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pausedRef = useRef(paused)
@@ -67,6 +77,8 @@ export default function BlissCanvas({
    */
   const settingsRef = useRef(settings)
   settingsRef.current = settings
+  const fireRef = useRef(fireMix)
+  fireRef.current = fireMix
   /** Bumped when a setting needs a resize (character size changes the grid). */
   const relayout = useRef<(() => void) | null>(null)
 
@@ -533,7 +545,14 @@ export default function BlissCanvas({
       // shader uses, so fire and scorch mark stay together.
       // Anchored at the crater floor, a little below the wreck's centre, so
       // the flames rise past it rather than being drawn behind it.
-      fire = stepFire(fire, dt, CRATER.x * cols, CRATER.y * rows + 2)
+      fire = stepFire(
+        fire,
+        dt,
+        CRATER.x * cols,
+        CRATER.y * rows + 2,
+        Math.random,
+        fireRef.current?.current ?? FULL_FIRE
+      )
       last = now
       draw()
       drawAmbient()

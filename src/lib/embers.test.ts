@@ -7,6 +7,7 @@ import {
   SMOKE_RAMP,
   MAX_EMBERS,
   type Fire,
+  type FireMix,
 } from "./embers"
 
 const seeded = (seed: number) => () => {
@@ -145,6 +146,44 @@ describe("emberCell", () => {
         const alpha = Number(c.color.split(",")[3].replace(")", ""))
         expect(alpha).toBeGreaterThanOrEqual(0)
         expect(alpha).toBeLessThanOrEqual(1)
+      }
+    }
+  })
+})
+
+describe("a fire turned up and down", () => {
+  const run = (mix: FireMix, seconds = 4) => {
+    const rng = seeded(7)
+    let f = createFire()
+    for (let i = 0; i < seconds / 0.033; i++) f = stepFire(f, 0.033, CX, CY, rng, mix)
+    return f
+  }
+
+  it("spawns nothing at all when it is out", () => {
+    expect(run({ flame: 0, smoke: 0, spark: 0, spread: 1 }).embers).toHaveLength(0)
+  })
+
+  it("only smokes when only smoke is left", () => {
+    const kinds = new Set(run({ flame: 0, smoke: 0.5, spark: 0, spread: 1 }).embers.map((e) => e.kind))
+    expect([...kinds]).toEqual(["smoke"])
+  })
+
+  it("burns thinner the lower it is turned", () => {
+    const full = run({ flame: 1, smoke: 1, spark: 1, spread: 1 }).embers.length
+    const low = run({ flame: 0.2, smoke: 0.2, spark: 0.2, spread: 1 }).embers.length
+    expect(low).toBeLessThan(full / 2)
+  })
+
+  /* A launch's exhaust lives longer than a wreck's smoke: the cell it is drawn
+     as must never run off the end of the glyph ramp. */
+  it("draws pale exhaust as real glyphs for its whole life", () => {
+    const f = run({ flame: 0.9, smoke: 5, spark: 0.7, spread: 3.2, pale: true }, 8)
+    expect(f.embers.length).toBeGreaterThan(MAX_EMBERS)
+    for (const e of f.embers) {
+      for (const t of [0, 1, 2]) {
+        const c = emberCell(e, t, false)
+        expect(c.ch).toHaveLength(1)
+        expect(c.color).not.toMatch(/NaN|undefined/)
       }
     }
   })

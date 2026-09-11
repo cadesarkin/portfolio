@@ -88,6 +88,29 @@ Levels only lean on the top and left edges of the screen being where they
 are. A bigger screen leaves more room to the right and below, and no level
 can depend on that room not being there.
 
+## Outside the game: the crash site
+
+The game changes the desktop it is played on. The wreck in the crater on the
+wallpaper is rebuilt as levels are finished (`src/lib/crash-site.ts`):
+
+- every level finished sends one more person walking up from the right, up
+  to six. They stay put between visits; only newcomers walk in, and never
+  while a level's rooms are covering the screen;
+- the wreck goes from burning, to looked at, dug out, patched, rebuilt
+  around a new booster, and stood on a launch pad with a gantry. The fire
+  dies down as they work, and steam comes off the tanks at the end;
+- after the last level the ship is ready. Launching it, from the finish
+  screen or by clicking it, counts down, lights, and climbs off the top of
+  the screen, and the wallpaper follows it into space: planets, a drifting
+  starfield, and ships and aliens crossing now and then. The ship idles out
+  there and is the way to the starmap from then on;
+- the level list, and Display Properties, can switch between the plains
+  (an empty pad, the crew waving) and space. The level list can also start
+  over: the wreck burns again and every level is locked.
+
+Progress lives in `src/lib/defrag/progress.ts`, saved under the same key as
+before, so a player partway through keeps their place.
+
 ## How the levels are kept honest
 
 Every level carries a scripted solution: a sequence of drags, crops, raises,

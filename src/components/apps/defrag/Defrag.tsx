@@ -41,6 +41,14 @@ import {
   setState,
   subscribe,
 } from "@/lib/defrag/store"
+import {
+  getProgress,
+  getServerProgress,
+  launch,
+  showScene,
+  startOver,
+  subscribeProgress,
+} from "@/lib/defrag/progress"
 import { resolve } from "@/lib/vfs-utils"
 import type { VFile, VNode } from "@/lib/vfs-types"
 
@@ -161,6 +169,7 @@ export default function Defrag({ winId, isMobile }: { winId: string; isMobile: b
   const api = useWindows()
   const { wins, registerKeys } = api
   const game = useSyncExternalStore(subscribe, getState, getState)
+  const progress = useSyncExternalStore(subscribeProgress, getProgress, getServerProgress)
 
   // Read by timers and listeners that outlive a render. The window manager's
   // functions change identity whenever any window moves.
@@ -248,6 +257,17 @@ export default function Defrag({ winId, isMobile }: { winId: string; isMobile: b
   const toMenu = useCallback(() => {
     closeLevel()
     setState({ ...initialState })
+  }, [closeLevel])
+
+  /**
+   * Clears the screen and sends the ship up. Everything steps aside, this
+   * window too, so the launch has the whole sky.
+   */
+  const takeOff = useCallback(() => {
+    closeLevel()
+    setState({ ...initialState })
+    apiRef.current.minimizeAll()
+    launch()
   }, [closeLevel])
 
   /*
@@ -543,7 +563,7 @@ export default function Defrag({ winId, isMobile }: { winId: string; isMobile: b
     )
   }
 
-  if (game.status === "intro") return <Menu onStart={startLevel} />
+  if (game.status === "intro") return <Menu onStart={startLevel} onLaunch={takeOff} />
 
   if (game.status === "done") {
     return (
@@ -551,9 +571,16 @@ export default function Defrag({ winId, isMobile }: { winId: string; isMobile: b
         <Title />
         <p>every sector is back where it belongs.</p>
         <p style={{ color: "var(--ink-faint)" }}>
-          the machine holds. for now. thank you for playing.
+          {progress.launched
+            ? "the machine holds. for now. thank you for playing."
+            : "out on the plains, the crew have finished. the ship is ready."}
         </p>
         <div style={{ display: "flex", gap: 8 }}>
+          {!progress.launched && (
+            <button type="button" className="seg" onClick={takeOff}>
+              launch
+            </button>
+          )}
           <button type="button" className="seg" onClick={toMenu}>
             levels
           </button>
@@ -612,25 +639,50 @@ export default function Defrag({ winId, isMobile }: { winId: string; isMobile: b
 }
 
 /** The level list: every chapter, every level reached so far. */
-function Menu({ onStart }: { onStart: (i: number) => void }) {
-  const reached = loadReached()
-  const next = reached < LEVELS.length ? reached : 0
-  const label =
-    reached === 0
-      ? "start"
-      : reached < LEVELS.length
-        ? `continue — ${LEVELS[next].name}`
-        : "play again"
+function Menu({ onStart, onLaunch }: { onStart: (i: number) => void; onLaunch: () => void }) {
+  const progress = useSyncExternalStore(subscribeProgress, getProgress, getServerProgress)
+  const reached = Math.min(progress.reached, LEVELS.length)
+  const done = reached >= LEVELS.length
+  const next = done ? 0 : reached
+  const label = reached === 0 ? "start" : done ? "play again" : `continue — ${LEVELS[next].name}`
+  const intro = progress.launched
+    ? "the ship has gone. out there, everything is fine."
+    : done
+      ? "every sector is back. the ship is waiting on the plains."
+      : "the machine is coming apart, its rooms adrift in separate windows. put it back."
   return (
     <Panel>
       <Title />
-      <p style={{ margin: "0 0 10px" }}>
-        the machine is coming apart, its rooms adrift in separate windows.
-        put it back.
-      </p>
-      <button type="button" className="seg" onClick={() => onStart(next)}>
-        {label}
-      </button>
+      <p style={{ margin: "0 0 10px" }}>{intro}</p>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <button type="button" className="seg" onClick={() => onStart(next)}>
+          {label}
+        </button>
+        {done && !progress.launched && (
+          <button type="button" className="seg" onClick={onLaunch}>
+            launch
+          </button>
+        )}
+        {progress.launched && (
+          <button
+            type="button"
+            className="seg"
+            onClick={() => showScene(progress.scene === "space" ? "plains" : "space")}
+          >
+            {progress.scene === "space" ? "back to the plains" : "back to space"}
+          </button>
+        )}
+        {progress.launched && (
+          <button
+            type="button"
+            className="seg"
+            onClick={startOver}
+            title="the wreck burns again, and every level starts locked"
+          >
+            start over
+          </button>
+        )}
+      </div>
       <div style={{ marginTop: 12, display: "grid", gap: 4 }}>
         {CHAPTERS.map((name, c) => (
           <div key={name} style={{ display: "flex", alignItems: "center", gap: 4 }}>

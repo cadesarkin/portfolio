@@ -599,3 +599,51 @@ a:hover {
   background: #cbb8f0;
   border-color: #cbb8f0;
 }
+
+/* ── The ship, once it is out in space ───────────────────── */
+
+/* It rises into view from below, then idles, bobbing. */
+.space-ship {
+  animation:
+    ship-arrive 3.2s cubic-bezier(0.2, 0.8, 0.3, 1) both,
+    ship-bob 4.8s ease-in-out 3.2s infinite;
+}
+
+@keyframes ship-arrive {
+  from {
+    transform: translate(-50%, 90vh);
+  }
+  to {
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes ship-bob {
+  0%,
+  100% {
+    transform: translate(-50%, -50%);
+  }
+  50% {
+    transform: translate(-50%, calc(-50% - 7px));
+  }
+}
+
+.space-ship-flame {
+  animation: flame-flicker 0.18s steps(2) infinite;
+}
+
+@keyframes flame-flicker {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space-ship {
+    animation: none;
+    transform: translate(-50%, -50%);
+  }
+  .space-ship-flame {
+    animation: none;
+  }
+}

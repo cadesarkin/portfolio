@@ -1,5 +1,12 @@
 "use client"
 
+import { useSyncExternalStore } from "react"
+import {
+  getProgress,
+  getServerProgress,
+  showScene,
+  subscribeProgress,
+} from "@/lib/defrag/progress"
 import { useTheme } from "@/components/desktop/theme-context"
 import {
   useWallpaper,
@@ -62,6 +69,7 @@ function Slider({ label, value, min, max, step, format, onChange }: SliderProps)
 export default function DisplayProperties() {
   const { settings, set, reset } = useWallpaper()
   const { theme, setTheme } = useTheme()
+  const progress = useSyncExternalStore(subscribeProgress, getProgress, getServerProgress)
 
   const controls: (SliderProps & { key: keyof WallpaperSettings })[] = [
     {
@@ -164,6 +172,41 @@ export default function DisplayProperties() {
           </button>
         ))}
       </div>
+
+      {/* Only once there is somewhere else to show: after the ship has gone. */}
+      {progress.launched && (
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            padding: "0 0 14px",
+            borderBottom: "1px solid var(--win-rule)",
+            marginBottom: 6,
+          }}
+        >
+          <span
+            style={{
+              flex: "0 0 116px",
+              color: "var(--ink-muted)",
+              fontSize: 13,
+              alignSelf: "center",
+            }}
+          >
+            scene
+          </span>
+          {(["plains", "space"] as const).map((sc) => (
+            <button
+              key={sc}
+              type="button"
+              onClick={() => showScene(sc)}
+              data-active={progress.scene === sc ? "" : undefined}
+              className="seg"
+            >
+              {sc}
+            </button>
+          ))}
+        </div>
+      )}
 
       {controls.map(({ key, ...slider }) => (
         <Slider key={key} {...slider} />

@@ -10,6 +10,7 @@
 
 import { newWorld, type Player, type View, type World } from "./engine"
 import { LEVELS, revealed } from "./levels"
+import { getProgress, setProgress } from "./progress"
 
 export type Status = "intro" | "playing" | "won" | "done"
 
@@ -102,23 +103,10 @@ export function killProcess(pid: number): { ok: boolean; message: string } {
 
 /* ── Progress ─────────────────────────────────────────────────────────── */
 
-const PROGRESS_KEY = "sarkin.defrag"
-
 /** The furthest level reached, so a returning player picks up where they were. */
-export function loadReached(): number {
-  try {
-    const n = Number(JSON.parse(localStorage.getItem(PROGRESS_KEY) ?? "{}").reached)
-    return Number.isFinite(n) && n > 0 ? Math.min(Math.floor(n), LEVELS.length) : 0
-  } catch {
-    return 0
-  }
-}
+export const loadReached = (): number => Math.min(getProgress().reached, LEVELS.length)
 
 export function saveReached(level: number): void {
-  try {
-    const best = Math.max(level, loadReached())
-    localStorage.setItem(PROGRESS_KEY, JSON.stringify({ reached: best }))
-  } catch {
-    // Storage unavailable: progress lasts for the session only.
-  }
+  const best = Math.max(level, getProgress().reached)
+  if (best !== getProgress().reached) setProgress({ reached: best })
 }
