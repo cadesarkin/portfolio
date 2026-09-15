@@ -275,6 +275,9 @@ const CHEERING: Station[] = [-18, 23, -23, 27, -28, -33].map((x) => ({
  */
 export function stageFor(reached: number, launched: boolean, levels: number): Stage {
   const pad = centred("pad", PAD, 0, 0, STEEL)
+  // Each stage starts a share of the way through the game, however long the
+  // game is: with fifteen levels, the pad goes up at twelve.
+  const from = (share: number) => Math.max(1, Math.round(levels * share))
 
   if (launched) {
     return {
@@ -296,7 +299,7 @@ export function stageFor(reached: number, launched: boolean, levels: number): St
     }
   }
 
-  if (reached >= 12) {
+  if (reached >= from(0.8)) {
     return {
       id: "pad",
       label: "the ship on its pad, being fuelled",
@@ -314,7 +317,7 @@ export function stageFor(reached: number, launched: boolean, levels: number): St
     }
   }
 
-  if (reached >= 9) {
+  if (reached >= from(0.6)) {
     return {
       id: "assembly",
       label: "the wreck, rebuilt around a new booster",
@@ -336,7 +339,7 @@ export function stageFor(reached: number, launched: boolean, levels: number): St
     }
   }
 
-  if (reached >= 6) {
+  if (reached >= from(0.4)) {
     return {
       id: "patched",
       label: "the wreck, patched up",
@@ -353,11 +356,13 @@ export function stageFor(reached: number, launched: boolean, levels: number): St
         work("weld", 0, 1, 8),
         look(23, -1),
       ],
-      fire: reached === 6 ? { flame: 0, smoke: 0.2, spark: 0, spread: 1 } : NO_FIRE,
+      fire: reached === from(0.4) ? { flame: 0, smoke: 0.2, spark: 0, spread: 1 } : NO_FIRE,
     }
   }
 
-  if (reached >= 3) {
+  if (reached >= from(0.2)) {
+    // The last of the fire, dying across the stage.
+    const into = (reached - from(0.2)) / Math.max(1, from(0.4) - from(0.2))
     return {
       id: "propped",
       label: "the wreck, dug out",
@@ -378,7 +383,7 @@ export function stageFor(reached: number, launched: boolean, levels: number): St
         { flame: 0.22, smoke: 0.6, spark: 0.15, spread: 1 },
         { flame: 0.08, smoke: 0.45, spark: 0.05, spread: 1 },
         { flame: 0, smoke: 0.3, spark: 0, spread: 1 },
-      ][reached - 3],
+      ][Math.min(2, Math.floor(into * 3))],
     }
   }
 

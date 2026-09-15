@@ -266,7 +266,8 @@ function landing(
   placements: Placement[],
   frags: Record<string, Fragment>,
   view: Viewport,
-  world: World
+  world: World,
+  zFree = false
 ): Landing {
   const own = here.frag ? frags[here.frag] : undefined
   if (!own) return { blocked: "hidden" }
@@ -276,6 +277,7 @@ function landing(
   const ty = from.y + dy
   const [px, py] = centreOf(here, tx, ty)
   if (!onScreen(view, px, py)) return { blocked: "offscreen" }
+  if (zFree) return landingFree(here, own, tx, ty, px, py, dir, placements, frags, world)
   const top = topAt(placements, px, py)
 
   if (inView(here, tx, ty)) {
@@ -299,6 +301,60 @@ function landing(
   const y = ly + (top.oy ?? 0)
   if (!passable(other, x, y, world)) return { blocked: refused(other, x, y, world) }
   return { frag: other.id, x, y }
+}
+
+/** Stacking order at and above which a window is always on top. */
+export const ON_TOP_Z = 1_000_000
+
+/** Whether an always-on-top window above `p` covers a point. */
+const pinnedOver = (placements: Placement[], p: Placement, px: number, py: number): boolean =>
+  placements.some((q) => q !== p && q.z >= ON_TOP_Z && q.z > p.z && inside(q.outer, px, py))
+
+/**
+ * Where a step lands if the player may bring any window forward first, for
+ * nothing. Only always-on-top windows still get in the way. Used by the
+ * shortcut hunter, which has to be generous to the player to be believed.
+ */
+function landingFree(
+  here: Placement,
+  own: Fragment,
+  tx: number,
+  ty: number,
+  px: number,
+  py: number,
+  dir: Dir,
+  placements: Placement[],
+  frags: Record<string, Fragment>,
+  world: World
+): Landing {
+  if (inView(here, tx, ty)) {
+    if (pinnedOver(placements, here, px, py)) return { blocked: "hidden" }
+    if (!passable(own, tx, ty, world)) return { blocked: refused(own, tx, ty, world) }
+    return { frag: own.id, x: tx, y: ty }
+  }
+  let blocked: Blocked = "void"
+  for (const p of placements) {
+    if (p === here || !p.frag || !inside(p.body, px, py)) continue
+    const other = frags[p.frag]
+    if (!other || pinnedOver(placements, p, px, py)) {
+      blocked = "hidden"
+      continue
+    }
+    const lx = Math.floor((px - p.body.x) / CELL_W)
+    const ly = Math.floor((py - p.body.y) / CELL_H)
+    if (!ENTRY_EDGE[dir](p, lx, ly)) {
+      blocked = "wall"
+      continue
+    }
+    const x = lx + (p.ox ?? 0)
+    const y = ly + (p.oy ?? 0)
+    if (!passable(other, x, y, world)) {
+      blocked = refused(other, x, y, world)
+      continue
+    }
+    return { frag: other.id, x, y }
+  }
+  return { blocked }
 }
 
 export interface Player {
@@ -330,12 +386,14 @@ export function step(
   placements: Placement[],
   frags: Record<string, Fragment>,
   view: Viewport,
-  world: World
+  world: World,
+  /** Let the player bring any window forward before the step. See landingFree. */
+  zFree = false
 ): StepResult {
   const here = placements.find((p) => p.frag === player.frag)
   if (!here) return { player, moved: false, blocked: "hidden", won: false, events: [] }
 
-  const target = landing(here, player, dir, placements, frags, view, world)
+  const target = landing(here, player, dir, placements, frags, view, world, zFree)
   if ("blocked" in target) {
     return { player, moved: false, blocked: target.blocked, won: false, events: [] }
   }

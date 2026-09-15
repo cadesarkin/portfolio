@@ -64,6 +64,9 @@ door, switch, note or gate appears somewhere the level does not mean one.
   the player inside; it waits.
 - **wander** — hops between set places on a cycle, taking whoever is inside
   along.
+- **heavy** — will not be dragged while the player stands in it. A bridge,
+  never a ferry. Introduced in chapter 4, where letting every room carry you
+  made most bridge puzzles skippable.
 - **process** — has a pid. The terminal's `ps` lists it, with the pid hidden
   until a note has named it; `kill <pid>` then removes the window for the
   rest of the level.
@@ -84,9 +87,41 @@ eat what the player was typing into the terminal.
    windows that come and go, one that carries you on a schedule, popups, and
    a last level that uses everything.
 
+4. **relocation** — leapfrog, switchback, errands, shuttle, offcut, tandem,
+   relocation. Unlit from here on. Heavy rooms, one bridge used for two
+   gaps, ferry routes, a room cut differently for each gap, and chains of
+   rooms that each meet the next only one way.
+5. **kernel** — fork, orbit, deadlock, panic, watchlist, descent, core.
+   Watchdogs whose pids are written down past them, a wanderer calling at
+   three hubs, rooms released one by one, guards on every ferry stop, and a
+   last level that takes ten moves at the least.
+
 Levels only lean on the top and left edges of the screen being where they
 are. A bigger screen leaves more room to the right and below, and no level
 can depend on that room not being there.
+
+## The deep end: chapters 4 and 5
+
+The first fifteen levels play in ten to fifteen minutes: most need two or
+three drags, and a lit edge shows the moment a join works. Chapters 4
+(*relocation*) and 5 (*kernel*) are built to take much longer:
+
+- **nothing lights up.** From chapter 4 on, an edge meeting another room is
+  not lit. The doors still show; whether they line up is for the player to
+  see. A **hint** (the button, or `h`) lights the joins for three seconds and
+  is counted, and the finish line says how many were used.
+- **every level has a par**: the fewest moves — drags, single-edge cuts,
+  kills — it should take. Levels are designed around reuse (one bridge, two
+  gaps), ferry routes, cutting the same room differently at different times,
+  and chains of rooms that each only meet the next one way.
+- **the shortcut hunter** (`src/lib/defrag/hunt.ts`) tries to beat par. It
+  plays generously — bringing a window forward is free, hostile windows are
+  in whatever state suits, and the player may stand anywhere they could walk
+  to — and follows every move that does something: a drag joining a room to
+  where the player can walk, a drag of the room the player stands in, a cut
+  along one edge, a kill. It is a search, not a proof: past a few moves there
+  are too many layouts, so it keeps the most promising at each step. A level
+  it can beat is redesigned. `levels-deep.test.ts` runs it on every level.
 
 ## Outside the game: the crash site
 

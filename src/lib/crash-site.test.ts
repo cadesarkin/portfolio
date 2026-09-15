@@ -38,6 +38,16 @@ describe("the site, level by level", () => {
     ids.forEach((id, i) => i > 0 && expect(id).toBeGreaterThanOrEqual(ids[i - 1]))
   })
 
+  it("spreads its stages over however many levels the game has", () => {
+    const ids = (levels: number) =>
+      [0, 0.2, 0.4, 0.6, 0.8, 1].map((share) => stageFor(Math.round(levels * share), false, levels).id)
+    const expected = ["wreck", "propped", "patched", "assembly", "pad", "ready"]
+    expect(ids(15)).toEqual(expected)
+    expect(ids(30)).toEqual(expected)
+    // A long game does not finish the ship halfway through.
+    expect(stageFor(15, false, 30).id).not.toBe("ready")
+  })
+
   it("stands empty once the ship has gone", () => {
     const gone = stageFor(LEVELS, true, LEVELS)
     expect(gone.id).toBe("gone")

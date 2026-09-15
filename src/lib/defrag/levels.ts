@@ -12,6 +12,8 @@
  */
 
 import { parseFragment, type Fragment, type Trigger, type View, type World } from "./engine"
+import { DEEP_CHAPTERS, DEEP_LEVELS } from "./levels-deep"
+import { KERNEL_LEVELS } from "./levels-kernel"
 
 export interface Spot {
   col: number
@@ -41,6 +43,8 @@ export interface RoomDef {
   locked?: boolean
   /** Cannot be dragged, but can be resized if croppable. */
   pinned?: boolean
+  /** Will not be dragged while the player stands in it: a bridge, never a ferry. */
+  heavy?: boolean
   /** Always drawn over every other window. */
   onTop?: boolean
   /** A process the terminal can see, and kill once a note has named its pid. */
@@ -77,9 +81,25 @@ export interface Level {
   /** What each note says, keyed by the note tile as "room:x,y". */
   notes?: Record<string, Note>
   solution: Move[]
+  /**
+   * The fewest moves — drags, single-edge cuts, kills — it should be possible
+   * to finish in. The tests set the shortcut hunter on it to check.
+   */
+  par?: number
 }
 
-export const CHAPTERS = ["boot", "fragmentation", "hostile"]
+export const CHAPTERS = ["boot", "fragmentation", "hostile", ...DEEP_CHAPTERS]
+
+/**
+ * Chapters before this one light an edge the moment it meets another room.
+ * Later ones leave the player to see it for themselves, with a hint to ask for.
+ */
+export const UNLIT_FROM = 3
+
+export const lightsJoins = (level: Level): boolean => level.chapter < UNLIT_FROM
+
+/** How long a hint lights the joins for, in milliseconds. */
+export const HINT_MS = 3000
 
 /** The smallest a croppable window can be cut to, in tiles. */
 export const MIN_CROP = { cols: 6, rows: 2 }
@@ -135,7 +155,7 @@ const go = (room: string, x: number, y: number): Move => ({ walk: { room, x, y }
 
 /* ── The levels ───────────────────────────────────────────────────────── */
 
-export const LEVELS: Level[] = [
+const FIRST: Level[] = [
   /* ── chapter 1: boot ─────────────────────────────────────────────── */
 
   {
@@ -1450,6 +1470,8 @@ export const LEVELS: Level[] = [
     ],
   },
 ]
+
+export const LEVELS: Level[] = [...FIRST, ...DEEP_LEVELS, ...KERNEL_LEVELS]
 
 /** Window ids for a level's rooms. Namespaced so they cannot meet a VFS path. */
 export const roomWindowId = (roomId: string): string => `defrag:${roomId}`

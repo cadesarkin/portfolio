@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useSyncExternalStore } from "react"
 import { CELL_H, CELL_W, parseFragment, tileAt, wholeView } from "@/lib/defrag/engine"
-import { LEVELS, roomIdOf } from "@/lib/defrag/levels"
+import { LEVELS, lightsJoins, roomIdOf } from "@/lib/defrag/levels"
 import { getState, subscribe } from "@/lib/defrag/store"
 
 /**
@@ -82,7 +82,10 @@ export default function RoomView({ winId }: { winId: string }) {
       const g = live.current
       const world = g.world
       const view = g.views[frag.id] ?? wholeView(frag)
-      const linked = new Set(g.links[frag.id] ?? [])
+      // Unlit levels show where the doors are, but not which of them meet,
+      // unless a hint is showing.
+      const lit = (level && lightsJoins(level)) || now < g.hint
+      const linked = new Set(lit ? (g.links[frag.id] ?? []) : [])
       const t = now / 1000
       const pulse = 0.55 + 0.45 * Math.sin(t * 4)
       // Walls say what a room will let you do with it: red for a window that

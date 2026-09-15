@@ -103,10 +103,11 @@ export function placementsOf(level: Level, s: SimState): Placement[] {
     })
 }
 
-/** Whether a room's window can be dragged right now. */
-export const draggable = (r: RoomDef, world: World): boolean =>
+/** Whether a room's window can be dragged right now, with the player where they are. */
+export const draggable = (r: RoomDef, world: World, player?: Player): boolean =>
   !r.hostile &&
   !r.pinned &&
+  !(r.heavy && player?.frag === r.id) &&
   (!r.locked || world.unlocked.includes(r.id)) &&
   !world.killed.includes(r.id)
 
@@ -208,7 +209,7 @@ function roomDef(level: Level, id: string): RoomDef {
 export function apply(level: Level, s: SimState, move: Move, view: Viewport): SimState {
   if ("place" in move) {
     const def = roomDef(level, move.place)
-    if (!draggable(def, s.world)) throw new Error(`${def.id} will not move`)
+    if (!draggable(def, s.world, s.player)) throw new Error(`${def.id} will not move`)
     const next = { ...s.rooms[def.id], col: move.col, row: move.row }
     // Dragging a window brings it forward, as it does on screen.
     return raise({ ...s, rooms: { ...s.rooms, [def.id]: next } }, def.id, level)
@@ -380,7 +381,7 @@ export function renderScreen(level: Level, s: SimState, view: Viewport): string 
       }
       const b = top.body
       if (px < b.x || py < b.y || px >= b.x + b.w || py >= b.y + b.h) {
-        line += top.frag
+        line += top.frag[0]
         continue
       }
       const x = Math.floor((px - b.x) / CELL_W) + (top.ox ?? 0)
@@ -403,7 +404,7 @@ export function firstMoves(level: Level, s: SimState, view: Viewport): Move[] {
   const rows = Math.floor((view.h - TASKBAR_H) / CELL_H)
   for (const r of level.rooms) {
     if (!s.rooms[r.id].hidden) out.push({ raise: r.id })
-    if (!draggable(r, s.world)) continue
+    if (!draggable(r, s.world, s.player)) continue
     const v = s.rooms[r.id].view
     for (let row = 2 - v.oy; row + v.oy + v.rows <= rows; row++) {
       for (let col = 1 - v.ox; col + v.ox + v.cols <= cols; col++) {

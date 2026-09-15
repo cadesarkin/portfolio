@@ -28,6 +28,10 @@ export interface DefragState {
   bump: { frag: string; x: number; y: number; at: number } | null
   /** A line for the player: why a step was refused, or what just happened. */
   note: string | null
+  /** Until when joined edges are lit, in a level that does not light them. */
+  hint: number
+  /** Hints asked for in this attempt at the level. */
+  hintsUsed: number
 }
 
 export const initialState: DefragState = {
@@ -40,6 +44,8 @@ export const initialState: DefragState = {
   views: {},
   bump: null,
   note: null,
+  hint: 0,
+  hintsUsed: 0,
 }
 
 type Listener = () => void

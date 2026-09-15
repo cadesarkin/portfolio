@@ -35,8 +35,7 @@ const floorNextTo = (f: Fragment, x: number, y: number): boolean =>
   ].some(([nx, ny]) => ".>@".includes(f.tiles[ny]?.[nx] ?? " "))
 
 describe("the game", () => {
-  it("has fifteen levels across its three chapters, in order", () => {
-    expect(LEVELS).toHaveLength(15)
+  it("has every chapter, each with levels, in order", () => {
     const chapters = LEVELS.map((l) => l.chapter)
     expect([...chapters].sort()).toEqual(chapters)
     for (let c = 0; c < CHAPTERS.length; c++) expect(chapters).toContain(c)

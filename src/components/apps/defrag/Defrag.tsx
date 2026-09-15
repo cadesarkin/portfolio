@@ -23,7 +23,9 @@ import {
   LEVELS,
   MIN_CROP,
   MIN_VIEW,
+  HINT_MS,
   fullView,
+  lightsJoins,
   isRoomWindow,
   roomIdOf,
   roomWindowId,
@@ -119,11 +121,14 @@ function measure(wins: Win[]): Placement[] {
 
 const viewport = () => ({ w: window.innerWidth, h: window.innerHeight })
 
-/** What the player may do to a room's window, given what has happened so far. */
-function allowFor(r: RoomDef, world: World): Allow {
+/**
+ * What the player may do to a room's window, given what has happened so far
+ * and whether they are standing in it.
+ */
+function allowFor(r: RoomDef, world: World, inside = false): Allow {
   const held = Boolean(r.hostile) || (Boolean(r.locked) && !world.unlocked.includes(r.id))
   return {
-    move: !held && !r.pinned,
+    move: !held && !r.pinned && !(r.heavy && inside),
     resize: Boolean(r.crop) && !held,
     close: false,
     minimize: false,
@@ -136,6 +141,7 @@ function titleFor(r: RoomDef, world: World): string {
   if (r.hostile) return r.title
   if (r.locked && !world.unlocked.includes(r.id)) return `locked · ${r.title}`
   if (r.pinned) return `pinned · ${r.title}`
+  if (r.heavy) return `heavy · ${r.title}`
   return r.title
 }
 
@@ -213,6 +219,7 @@ export default function Defrag({ winId, isMobile }: { winId: string; isMobile: b
 
       const world = newWorld()
       const frags = roomsOf(lvl)
+      const start = startOf(lvl)
       for (const r of lvl.rooms) {
         const f = frags[r.id]
         const v = fullView(r)
@@ -231,7 +238,7 @@ export default function Defrag({ winId, isMobile }: { winId: string; isMobile: b
             oy: v.oy,
             ...(r.crop && { max: { cols: f.cols, rows: f.rows }, min: MIN_CROP }),
           },
-          allow: allowFor(r, world),
+          allow: allowFor(r, world, r.id === start.frag),
           onTop: r.onTop,
           skipTaskbar: true,
         })
@@ -248,7 +255,10 @@ export default function Defrag({ winId, isMobile }: { winId: string; isMobile: b
         views: {},
         bump: null,
         note: null,
+        hint: 0,
+        hintsUsed: 0,
       })
+      heavyIn.current = lvl.rooms.find((r) => r.heavy && r.id === start.frag)?.id ?? null
       setRun((n) => n + 1)
     },
     [closeLevel, winId]
@@ -355,13 +365,32 @@ export default function Defrag({ winId, isMobile }: { winId: string; isMobile: b
         apiRef.current.minimize("/terminal")
         apiRef.current.focus(winId)
       } else if (unlocked.includes(r.id) && !allowed(win, "move")) {
-        apiRef.current.configure(id, { allow: allowFor(r, g.world), title: titleFor(r, g.world) })
+        apiRef.current.configure(id, {
+          allow: allowFor(r, g.world, g.player?.frag === r.id),
+          title: titleFor(r, g.world),
+        })
       }
     }
   }, [killed, unlocked, winId])
 
-  // A crop may never cut out the tile the player is standing on.
+  // A heavy room holds still while the player stands in it, and lets go when
+  // they step out.
   const player = game.player
+  const heavyIn = useRef<string | null>(null)
+  useEffect(() => {
+    const g = getState()
+    if (!player || g.status !== "playing") return
+    const rooms = LEVELS[g.level].rooms
+    const now = rooms.find((r) => r.heavy && r.id === player.frag)?.id ?? null
+    if (now === heavyIn.current) return
+    for (const id of [heavyIn.current, now]) {
+      const r = id ? rooms.find((q) => q.id === id) : undefined
+      if (r) apiRef.current.configure(roomWindowId(r.id), { allow: allowFor(r, g.world, r.id === now) })
+    }
+    heavyIn.current = now
+  }, [player])
+
+  // A crop may never cut out the tile the player is standing on.
   const keptIn = useRef<string | null>(null)
   useEffect(() => {
     if (!player || getState().status !== "playing") return
@@ -464,6 +493,15 @@ export default function Defrag({ winId, isMobile }: { winId: string; isMobile: b
     focus("/terminal")
   }, [])
 
+  /** Lights the joins for a moment, and counts it. */
+  const askHint = useCallback(() => {
+    const g = getState()
+    if (g.status !== "playing") return
+    setState({ hint: performance.now() + HINT_MS, hintsUsed: g.hintsUsed + 1 })
+    // The rooms only redraw what they are told; wake them when it lapses.
+    window.setTimeout(() => setState({}), HINT_MS + 50)
+  }, [])
+
   /* ── Keys ──────────────────────────────────────────────────────────── */
 
   const onKey = useCallback(
@@ -487,6 +525,12 @@ export default function Defrag({ winId, isMobile }: { winId: string; isMobile: b
       if (e.key === "r" || e.key === "R") {
         e.preventDefault()
         startLevel(g.level)
+        return
+      }
+
+      if ((e.key === "h" || e.key === "H") && !lightsJoins(LEVELS[g.level])) {
+        e.preventDefault()
+        askHint()
         return
       }
 
@@ -533,7 +577,7 @@ export default function Defrag({ winId, isMobile }: { winId: string; isMobile: b
         note: null,
       })
     },
-    [startLevel, openNote]
+    [startLevel, openNote, askHint]
   )
 
   /*
@@ -603,7 +647,14 @@ export default function Defrag({ winId, isMobile }: { winId: string; isMobile: b
 
       {game.status === "won" ? (
         <>
-          <p style={{ color: "#2c9a5f" }}>sector restored in {game.moves} steps.</p>
+          <p style={{ color: "#2c9a5f" }}>
+            sector restored in {game.moves} steps
+            {lightsJoins(level)
+              ? "."
+              : game.hintsUsed === 0
+                ? ", without a hint."
+                : `, with ${game.hintsUsed} hint${game.hintsUsed === 1 ? "" : "s"}.`}
+          </p>
           <div style={{ display: "flex", gap: 8 }}>
             <button type="button" className="seg" onClick={() => startLevel(game.level + 1)}>
               next — enter
@@ -625,6 +676,16 @@ export default function Defrag({ winId, isMobile }: { winId: string; isMobile: b
             {hasProcs && (
               <button type="button" className="seg" onClick={openTerminal}>
                 terminal
+              </button>
+            )}
+            {!lightsJoins(level) && (
+              <button
+                type="button"
+                className="seg"
+                onClick={askHint}
+                title="light the edges that meet, for a moment"
+              >
+                hint — h{game.hintsUsed ? ` (${game.hintsUsed})` : ""}
               </button>
             )}
             <button type="button" className="seg" onClick={toMenu}>
@@ -649,11 +710,11 @@ function Menu({ onStart, onLaunch }: { onStart: (i: number) => void; onLaunch: (
     ? "the ship has gone. out there, everything is fine."
     : done
       ? "every sector is back. the ship is waiting on the plains."
-      : "the machine is coming apart, its rooms adrift in separate windows. put it back."
+      : "the machine is coming apart. put it back."
   return (
     <Panel>
       <Title />
-      <p style={{ margin: "0 0 10px" }}>{intro}</p>
+      <p style={{ margin: "0 0 8px" }}>{intro}</p>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         <button type="button" className="seg" onClick={() => onStart(next)}>
           {label}
@@ -683,10 +744,13 @@ function Menu({ onStart, onLaunch }: { onStart: (i: number) => void; onLaunch: (
           </button>
         )}
       </div>
-      <div style={{ marginTop: 12, display: "grid", gap: 4 }}>
+      {/* Five chapters have to fit a 300px window: small buttons, tight rows. */}
+      <div style={{ marginTop: 8, display: "grid", gap: 2 }}>
         {CHAPTERS.map((name, c) => (
-          <div key={name} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ color: "var(--ink-faint)", fontSize: 12, width: 100 }}>{name}</span>
+          <div key={name} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+            <span style={{ color: "var(--ink-faint)", fontSize: 11, width: 92, flex: "0 0 92px" }}>
+              {name}
+            </span>
             {LEVELS.map((l, i) =>
               l.chapter !== c ? null : (
                 <button
@@ -698,9 +762,11 @@ function Menu({ onStart, onLaunch }: { onStart: (i: number) => void; onLaunch: (
                   title={i > reached ? "not reached yet" : l.name}
                   aria-label={`level ${i + 1}${i > reached ? ", not reached yet" : `, ${l.name}`}`}
                   style={{
-                    fontSize: 12,
-                    padding: "1px 0",
+                    fontSize: 11,
+                    padding: 0,
                     width: 26,
+                    height: 20,
+                    lineHeight: "18px",
                     opacity: i > reached ? 0.35 : 1,
                   }}
                 >
